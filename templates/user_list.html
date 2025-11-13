@@ -1,0 +1,109 @@
+{% extends 'home.html' %}
+
+{% block title %}Carteira IJP - Gerenciar Usuários{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Gerenciar Usuários</h2>
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nome, email, cargo ou loja" value="{{ request.GET.q }}">
+            <button class="btn btn-primary" type="submit">Buscar</button>
+        </div>
+    </form>
+
+    {% for loja, users_in_loja in users_by_loja.items %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>{{ loja.nome }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_in_loja %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.get_role_display }}</td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'user_edit' user.pk %}" class="btn btn-primary btn-sm">Editar</a>
+                                {% if user.is_active %}
+                                    <a href="{% url 'user_deactivate' user.pk %}" class="btn btn-warning btn-sm">Inativar</a>
+                                {% else %}
+                                    <a href="{% url 'user_activate' user.pk %}" class="btn btn-success btn-sm">Ativar</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if users_sem_loja %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Usuários Sem Loja</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_sem_loja %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.get_role_display }}</td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'user_edit' user.pk %}" class="btn btn-primary btn-sm">Editar</a>
+                                {% if user.is_active %}
+                                    <a href="{% url 'user_deactivate' user.pk %}" class="btn btn-warning btn-sm">Inativar</a>
+                                {% else %}
+                                    <a href="{% url 'user_activate' user.pk %}" class="btn btn-success btn-sm">Ativar</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

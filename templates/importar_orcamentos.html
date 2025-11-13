@@ -1,0 +1,41 @@
+{% extends 'home.html' %}
+
+{% block title %}Importar Orçamentos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Importar Orçamentos de Planilha</h2>
+    <p>Selecione um arquivo Excel (.xlsx) para importar os orçamentos. A planilha deve conter as seguintes colunas:</p>
+    <ul>
+        <li><strong>data_solicitacao:</strong> Data da solicitação (formato: YYYY-MM-DD)</li>
+        <li><strong>especificador:</strong> Nome completo do especificador</li>
+        <li><strong>categoria:</strong> Categoria do orçamento</li>
+        <li><strong>nome_cliente:</strong> Nome completo do cliente</li>
+        <li><strong>numero_orcamento:</strong> Número do orçamento (deve ser único)</li>
+        <li><strong>data_envio:</strong> Data de envio (formato: YYYY-MM-DD)</li>
+        <li><strong>valor_orcamento:</strong> Valor do orçamento (formato: 1234.56)</li>
+        <li><strong>termometro:</strong> Termômetro (Quente, Morno, ou Frio)</li>
+        <li><strong>data_previsao_fechamento:</strong> Data de previsão de fechamento (formato: YYYY-MM-DD)</li>
+        <li><strong>semana_previsao_fechamento:</strong> Semana de previsão de fechamento</li>
+        <li><strong>etapa:</strong> Etapa do funil</li>
+        <li><strong>usuario:</strong> Username do consultor responsável</li>
+    </ul>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <a href="{% url 'download_template' %}" class="btn btn-secondary mb-3">Baixar Planilha Modelo</a>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="file" class="form-label">Arquivo Excel (.xlsx)</label>
+            <input class="form-control" type="file" id="file" name="file" accept=".xlsx">
+        </div>
+        <button type="submit" class="btn btn-primary">Importar</button>
+    </form>
+</div>
+{% endblock %}

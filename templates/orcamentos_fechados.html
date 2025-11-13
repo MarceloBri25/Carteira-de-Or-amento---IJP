@@ -1,0 +1,116 @@
+{% extends 'home.html' %}
+{% load custom_filters %}
+
+{% block title %}Orçamentos Fechados{% endblock %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Orçamentos Fechados e Ganhos</h2>
+        <button type="button" class="btn btn-outline-secondary btn-md" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+            <i class="fas fa-filter"></i> Filtros
+        </button>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="cliente" class="form-label">Cliente</label>
+                    <select id="cliente" name="cliente">
+                        <option value="">Todos</option>
+                        {% for cliente in all_clientes %}
+                            <option value="{{ cliente.id }}" {% if selected_cliente|as_int == cliente.id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="consultor" class="form-label">Consultor</label>
+                    <select id="consultor" name="consultor">
+                        <option value="">Todos</option>
+                        {% for consultor in all_consultores %}
+                            <option value="{{ consultor.id }}" {% if selected_consultor|as_int == consultor.id %}selected{% endif %}>{{ consultor.get_full_name|default:consultor.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="loja" class="form-label">Loja</label>
+                    <select class="form-select" id="loja" name="loja">
+                        <option value="">Todas</option>
+                        {% for loja in all_lojas %}
+                            <option value="{{ loja.id }}" {% if selected_loja|as_int == loja.id %}selected{% endif %}>{{ loja.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="year" class="form-label">Ano de Fechamento</label>
+                    <select class="form-select" id="year" name="year">
+                        <option value="">Todos</option>
+                        {% for year in available_years %}
+                            <option value="{{ year }}" {% if selected_year|as_int == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="month" class="form-label">Mês de Fechamento</label>
+                    <select class="form-select" id="month" name="month">
+                        <option value="">Todos</option>
+                        {% for month_num, month_name in months_choices.items %}
+                            <option value="{{ month_num }}" {% if selected_month|as_int == month_num|as_int %}selected{% endif %}>{{ month_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                    <a href="{% url 'orcamentos_fechados' %}" class="btn btn-secondary">Limpar Filtros</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for orcamento in orcamentos %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-success"><i class="fas fa-check-circle me-2"></i>{{ orcamento.nome_cliente.nome_completo }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">Valor: R$ {{ orcamento.valor_orcamento|br_format }}</h6>
+                    <hr>
+                    <p class="card-text mb-1"><strong>Data de Fechamento:</strong> {{ orcamento.data_fechada_ganha|date:"d/m/Y" }}</p>
+                    <p class="card-text mb-1"><strong>Consultor:</strong> {{ orcamento.usuario.get_full_name|default:orcamento.usuario.username }}</p>
+                    <p class="card-text mb-1"><strong>Loja:</strong> {{ orcamento.usuario.loja.nome }}</p>
+                    <p class="card-text mb-1"><strong>Especificador:</strong> {{ orcamento.especificador.nome_completo }}</p>
+                    <p class="card-text mb-1"><strong>Contato do Cliente:</strong> {{ orcamento.nome_cliente.telefone }}</p>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col">
+            <p>Nenhum orçamento fechado e ganho encontrado.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    new TomSelect('#cliente', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+    new TomSelect('#consultor', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+</script>
+{% endblock %}

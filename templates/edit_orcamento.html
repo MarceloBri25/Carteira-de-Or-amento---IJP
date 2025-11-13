@@ -1,0 +1,176 @@
+
+{% extends "home.html" %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<div class="container mt-5">
+    <h2>Editar Orçamento</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="data_solicitacao" class="form-label">Data de Solicitação</label>
+                <input type="date" class="form-control" id="data_solicitacao" name="data_solicitacao" value="{{ orcamento.data_solicitacao|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="especificador" class="form-label">Especificador (Arquiteto)</label>
+                <select id="especificador" name="especificador" required>
+                    {% for especificador in especificadores %}
+                        <option value="{{ especificador.id }}" {% if especificador.id == orcamento.especificador.id %}selected{% endif %}>{{ especificador.nome_completo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="categoria" class="form-label">Categoria</label>
+                <select class="form-select" id="categoria" name="categoria" required>
+                    {% for value, name in category_choices %}
+                        <option value="{{ value }}" {% if value == orcamento.categoria %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="nome_cliente" class="form-label">Nome do Cliente</label>
+                <select id="nome_cliente" name="nome_cliente" required>
+                    {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}" {% if cliente.id == orcamento.nome_cliente.id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="numero_orcamento" class="form-label">Número do Orçamento</label>
+                <input type="text" class="form-control" id="numero_orcamento" name="numero_orcamento" value="{{ orcamento.numero_orcamento }}" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="data_envio" class="form-label">Data do Envio do Orçamento</label>
+                <input type="date" class="form-control" id="data_envio" name="data_envio" value="{{ orcamento.data_envio|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="valor_orcamento_display" class="form-label">Valor do Orçamento (R$)</label>
+                <input type="text" class="form-control" id="valor_orcamento_display" name="valor_orcamento_display" value="{{ orcamento.valor_orcamento|stringformat:'.2f' }}" required>
+                <input type="hidden" id="valor_orcamento" name="valor_orcamento" value="{{ orcamento.valor_orcamento|stringformat:'.2f' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="termometro" class="form-label">Termômetro</label>
+                <select class="form-select" id="termometro" name="termometro" required>
+                    {% for value, name in thermometer_choices %}
+                        <option value="{{ value }}" {% if value == orcamento.termometro %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="data_previsao_fechamento" class="form-label">Previsão de Fechamento</label>
+                <input type="date" class="form-control" id="data_previsao_fechamento" name="data_previsao_fechamento" value="{{ orcamento.data_previsao_fechamento|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="semana_previsao_fechamento" class="form-label">Semana da Previsão</label>
+                <select class="form-select" id="semana_previsao_fechamento" name="semana_previsao_fechamento">
+                    <option value="Semana 1" {% if orcamento.semana_previsao_fechamento == "Semana 1" %}selected{% endif %}>Semana 1</option>
+                    <option value="Semana 2" {% if orcamento.semana_previsao_fechamento == "Semana 2" %}selected{% endif %}>Semana 2</option>
+                    <option value="Semana 3" {% if orcamento.semana_previsao_fechamento == "Semana 3" %}selected{% endif %}>Semana 3</option>
+                    <option value="Semana 4" {% if orcamento.semana_previsao_fechamento == "Semana 4" %}selected{% endif %}>Semana 4</option>
+                    <option value="Semana 5" {% if orcamento.semana_previsao_fechamento == "Semana 5" %}selected{% endif %}>Semana 5</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="etapa" class="form-label">Etapa</label>
+                <select class="form-select" id="etapa" name="etapa" required>
+                    {% for value, name in stage_choices %}
+                        <option value="{{ value }}" {% if value == orcamento.etapa %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="data_fechada_ganha" class="form-label">Data Fechada e Ganha</label>
+                <input type="date" class="form-control" id="data_fechada_ganha" name="data_fechada_ganha" value="{{ orcamento.data_fechada_ganha|date:'Y-m-d' }}">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="jornada_cliente" class="form-label">Jornada do Cliente (Observações)</label>
+            <textarea class="form-control" id="jornada_cliente" name="jornada_cliente" rows="3">{{ orcamento.jornada_cliente }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        <a href="{% url 'consultor_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+
+<div class="modal fade" id="duplicateErrorModal" tabindex="-1" aria-labelledby="duplicateErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="duplicateErrorModalLabel">Erro de Duplicidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Já existe um orçamento com o número "{{ duplicate_numero }}".
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new TomSelect('#especificador', { create: false });
+    new TomSelect('#nome_cliente', { create: false });
+
+    const valorOrcamentoDisplayInput = document.getElementById('valor_orcamento_display');
+    const valorOrcamentoInput = document.getElementById('valor_orcamento');
+    if (valorOrcamentoDisplayInput) {
+        valorOrcamentoDisplayInput.addEventListener('input', function(event) {
+            let value = event.target.value;
+            // Keep only digits
+            value = value.replace(/\D/g, '');
+
+            if (value === '') {
+                valorOrcamentoInput.value = '';
+                return;
+            }
+
+            // Convert to a number
+            const numericValue = parseFloat(value) / 100;
+            valorOrcamentoInput.value = numericValue.toFixed(2);
+
+            // Format to Brazilian currency style, without the currency symbol
+            const formattedValue = new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(numericValue);
+
+            event.target.value = formattedValue;
+        });
+    }
+
+    {% if duplicate_error %}
+    var myModal = new bootstrap.Modal(document.getElementById('duplicateErrorModal'), {});
+    myModal.show();
+    {% endif %}
+});
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dataPrevisaoInput = document.getElementById('data_previsao_fechamento');
+        const semanaPrevisaoSelect = document.getElementById('semana_previsao_fechamento');
+
+        if (dataPrevisaoInput && semanaPrevisaoSelect) {
+            dataPrevisaoInput.addEventListener('change', function() {
+                const date = new Date(this.value);
+                const day = date.getUTCDate();
+                const week = Math.ceil(day / 7);
+                semanaPrevisaoSelect.value = 'Semana ' + week;
+            });
+        }
+    });
+</script>
+{% endblock %}

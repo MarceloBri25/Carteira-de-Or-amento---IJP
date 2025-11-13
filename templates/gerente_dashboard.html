@@ -1,0 +1,272 @@
+{% extends 'home.html' %}
+{% load custom_filters %}
+
+{% block title %}Dashboard do Gerente{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Dashboard do Gerente - {{ request.user.loja }}</h2>
+        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+            <i class="fas fa-filter me-2"></i>Filtros
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card card-body">
+            <form method="get" action="{% url 'gerente_dashboard' %}">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label for="year-filter" class="form-label">Ano</label>
+                        <select name="year" id="year-filter" class="form-select">
+                            {% for year in available_years %}
+                                <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="month-filter" class="form-label">Mês</label>
+                        <select name="month" id="month-filter" class="form-select">
+                            <option value="">Todos os meses</option>
+                            {% for month_num, month_name in months_choices.items %}
+                                <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                        <a href="{% url 'gerente_dashboard' %}" class="btn btn-secondary">Limpar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Métricas Principais -->
+    <div class="row">
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Valor Total da Carteira</h6>
+                    <h5 class="card-title">R$ {{ total_orcamento|br_format }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Fechado e Ganho</h6>
+                    <h5 class="card-title text-success">R$ {{ total_fechada_ganha_value|br_format }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Quentes</h6>
+                    <h5 class="card-title"><i class="fas fa-fire text-danger"></i> {{ orcamentos_quentes }}</h5>
+                    <p class="card-text text-muted"><small>R$ {{ total_quentes_value|br_format }}</small></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Mornos</h6>
+                    <h5 class="card-title"><i class="fas fa-thermometer-half text-warning"></i> {{ orcamentos_mornos }}</h5>
+                    <p class="card-text text-muted"><small>R$ {{ total_mornos_value|br_format }}</small></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Frios</h6>
+                    <h5 class="card-title"><i class="fas fa-snowflake text-info"></i> {{ orcamentos_frios }}</h5>
+                    <p class="card-text text-muted"><small>R$ {{ total_frios_value|br_format }}</small></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Perdidos no Mês</h6>
+                    <h5 class="card-title"><i class="fas fa-thumbs-down text-danger"></i> {{ total_perdido_mes_quantidade }}</h5>
+                    <p class="card-text text-muted"><small>R$ {{ total_perdido_mes_valor|br_format }}</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos Principais -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Desempenho dos Consultores</div>
+                <div class="card-body">
+                    {% if consultant_labels %}
+                        <canvas id="consultantPerformanceChart"></canvas>
+                    {% else %}
+                        <p class="text-center text-muted">Não há dados de desempenho para exibir.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Previsão de Fechamento por Semana</div>
+                <div class="card-body">
+                    {% if weekly_forecast_labels %}
+                        <canvas id="weeklyForecastChart"></canvas>
+                    {% else %}
+                        <p class="text-center text-muted">Não há dados de previsão para exibir.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos Secundários -->
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Progresso da Carteira</div>
+                <div class="card-body d-flex flex-column justify-content-center">
+                    {% if total_orcamento > 0 %}
+                        {% with progress_percentage=total_fechada_ganha_value|div:total_orcamento|mul:100 %}
+                            <div class="progress" style="height: 35px; font-size: 1rem;">
+                                <div class="progress-bar bg-dark progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ progress_percentage }}%;" aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ progress_percentage|floatformat:0 }}%
+                                </div>
+                            </div>
+                            <div class="mt-2 text-center text-muted">
+                                <span>R$ {{ total_fechada_ganha_value|br_format }} de R$ {{ total_orcamento|br_format }}</span>
+                            </div>
+                        {% endwith %}
+                    {% else %}
+                        <p class="text-center mb-0">Nenhum orçamento para calcular o progresso.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Status dos Orçamentos</div>
+                <div class="card-body">
+                    <canvas id="thermometerChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Configurações globais do Chart.js para a nova paleta
+    Chart.defaults.font.family = 'Montserrat, sans-serif';
+    Chart.defaults.color = 'var(--primary-text)';
+
+    // Gráfico de Status (Pizza)
+    const ctx = document.getElementById('thermometerChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Quente', 'Morno', 'Frio'],
+            datasets: [{
+                label: 'Status dos Orçamentos',
+                data: [{{ orcamentos_quentes }}, {{ orcamentos_mornos }}, {{ orcamentos_frios }}],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)', // Red
+                    'rgba(255, 193, 7, 0.7)', // Yellow
+                    'rgba(23, 162, 184, 0.7)'  // Blue
+                ],
+                borderColor: [
+                    '#dc3545',
+                    '#ffc107',
+                    '#17a2b8'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+
+    // Gráfico de Desempenho dos Consultores (Barras Horizontais)
+    {% if consultant_labels %}
+    const consultantCtx = document.getElementById('consultantPerformanceChart').getContext('2d');
+    new Chart(consultantCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ consultant_labels|safe }},
+            datasets: [
+                {
+                    label: 'Total em Carteira',
+                    data: {{ consultant_carteira|safe }},
+                    backgroundColor: 'rgba(108, 117, 125, 0.7)', // Medium gray
+                    borderColor: '#6c757d',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Total Vendido',
+                    data: {{ consultant_vendido|safe }},
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)', // Green
+                    borderColor: '#28a745',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
+                },
+                y: {
+                    ticks: {
+                        padding: 20
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Gráfico de Previsão Semanal (Barras)
+    {% if weekly_forecast_labels %}
+    const weeklyCtx = document.getElementById('weeklyForecastChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ weekly_forecast_labels|safe }},
+            datasets: [{
+                label: 'Valor (R$)',
+                data: {{ weekly_forecast_values|safe }},
+                backgroundColor: 'rgba(52, 58, 64, 0.8)', // Dark gray
+                borderColor: '#343a40',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

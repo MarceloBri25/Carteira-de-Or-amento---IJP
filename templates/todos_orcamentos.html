@@ -1,0 +1,219 @@
+
+{% extends "home.html" %}
+{% load custom_filters %}
+
+{% block title %}Todos os Orçamentos{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Todos os Orçamentos da Loja</h2>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Filtros
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url todos_orcamentos_url_name %}">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-year" class="form-label">Ano de Fechamento</label>
+                        <select class="form-select" id="filter-year" name="year">
+                            <option value="">Todos</option>
+                            {% for year_num in available_years %}
+                                <option value="{{ year_num }}" {% if request.GET.year|default:"" == year_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ year_num }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-month" class="form-label">Mês de Fechamento</label>
+                        <select class="form-select" id="filter-month" name="month">
+                            <option value="">Todos</option>
+                            {% for month_num in 12|get_range %}
+                                <option value="{{ month_num }}" {% if request.GET.month|default:"" == month_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ month_num|month_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-especificador" class="form-label">Especificador</label>
+                        <input type="text" id="filter-especificador-text" class="form-control" placeholder="Digite para buscar..." value="{{ selected_especificador_obj.nome_completo|default:'' }}">
+                        <input type="hidden" id="filter-especificador" name="especificador" value="{{ request.GET.especificador|default:'' }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-cliente" class="form-label">Cliente</label>
+                        <input type="text" id="filter-cliente-text" class="form-control" placeholder="Digite para buscar..." value="{{ selected_cliente_obj.nome_completo|default:'' }}">
+                        <input type="hidden" id="filter-cliente" name="cliente" value="{{ request.GET.cliente|default:'' }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-etapa" class="form-label">Etapa</label>
+                        <select class="form-select" id="filter-etapa" name="etapa">
+                            <option value="">Todas</option>
+                            {% for value, name in stage_choices %}
+                                <option value="{{ value }}" {% if request.GET.etapa|default:"" == value %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-termometro" class="form-label">Status</label>
+                        <select class="form-select" id="filter-termometro" name="termometro">
+                            <option value="">Todos</option>
+                            {% for value, name in thermometer_choices %}
+                                <option value="{{ value }}" {% if request.GET.termometro|default:"" == value %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-loja" class="form-label">Loja</label>
+                        <select class="form-select" id="filter-loja" name="loja" multiple>
+                            {% for loja in all_lojas %}
+                                <option value="{{ loja.id }}" {% if loja.id in selected_lojas %}selected{% endif %}>
+                                    {{ loja.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-dark me-2"><i class="fas fa-filter"></i> Filtrar</button>
+                <a href="{% url todos_orcamentos_url_name %}" class="btn btn-secondary"><i class="fas fa-times"></i> Limpar</a>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Todos os Orçamentos da Loja</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Consultor</th>
+                        <th>Cliente</th>
+                        <th>Especificador</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Etapa</th>
+                        <th>Data Solicitação</th>
+                        <th>Previsão Fechamento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for orcamento in orcamentos %}
+                    <tr>
+                        <td>{{ orcamento.usuario.username }}</td>
+                        <td>{{ orcamento.nome_cliente }}</td>
+                        <td>{{ orcamento.especificador|default_if_none:"" }}</td>
+                        <td>R$ {{ orcamento.valor_orcamento|br_format }}</td>
+                        <td><span class="badge badge-{{ orcamento.termometro|lower }}">{{ orcamento.termometro }}</span></td>
+                        <td>{{ orcamento.etapa }}</td>
+                        <td>{{ orcamento.data_solicitacao|date:"d/m/Y" }}</td>
+                        <td>{{ orcamento.data_previsao_fechamento|date:"d/m/Y" }}</td>
+                        <td>
+                            <a href="{% url 'edit_orcamento' orcamento.pk %}" class="btn btn-sm btn-dark">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9">Nenhum orçamento encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.autocomplete-results {
+    position: absolute;
+    border: 1px solid #ddd;
+    max-height: 150px;
+    overflow-y: auto;
+    background-color: white;
+    z-index: 1000;
+    width: calc(100% - 30px); /* Match input width */
+}
+.autocomplete-item {
+    padding: 8px;
+    cursor: pointer;
+}
+.autocomplete-item:hover {
+    background-color: #f0f0f0;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function setupAutocomplete(textInputId, hiddenInputId, url) {
+        const textInput = document.getElementById(textInputId);
+        const hiddenInput = document.getElementById(hiddenInputId);
+        let dropdown = document.createElement('div');
+        dropdown.className = 'autocomplete-results';
+        textInput.parentNode.style.position = 'relative'; // Needed for absolute positioning of dropdown
+        textInput.parentNode.appendChild(dropdown);
+
+        let debounceTimer;
+        textInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const query = textInput.value;
+
+            if (query.length < 2) {
+                dropdown.innerHTML = '';
+                dropdown.style.display = 'none';
+                hiddenInput.value = ''; // Clear hidden input if text is cleared
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetch(`${url}?q=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results.length) {
+                            dropdown.style.display = 'block';
+                            data.results.forEach(item => {
+                                const itemDiv = document.createElement('div');
+                                itemDiv.className = 'autocomplete-item';
+                                itemDiv.textContent = item.text;
+                                itemDiv.addEventListener('click', function() {
+                                    textInput.value = item.text;
+                                    hiddenInput.value = item.id;
+                                    dropdown.innerHTML = '';
+                                    dropdown.style.display = 'none';
+                                });
+                                dropdown.appendChild(itemDiv);
+                            });
+                        } else {
+                            dropdown.style.display = 'none';
+                        }
+                    });
+            }, 250); // 250ms debounce
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!textInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+
+    setupAutocomplete('filter-cliente-text', 'filter-cliente', '../../search-clientes/');
+    setupAutocomplete('filter-especificador-text', 'filter-especificador', '../../search-especificadores/');
+
+    new Choices('#filter-loja', {
+        removeItemButton: true,
+        placeholder: true,
+        placeholderValue: 'Selecione as lojas'
+    });
+});
+</script>
+{% endblock %}

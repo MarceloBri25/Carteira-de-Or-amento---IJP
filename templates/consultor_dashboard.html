@@ -1,0 +1,227 @@
+
+{% extends "home.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<div class="container mt-5">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Bem-vindo à sua Carteira IJP, {{ user.first_name|default:user.username }}!</h2>
+            <p class="lead">Gerencie seus orçamentos de forma simples e eficiente.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-outline-secondary btn-md me-2" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+            <a href="{% url 'consultor_criar_orcamento' %}" class="btn btn-primary btn-md">
+                <i class="fas fa-plus me-2"></i> Novo Orçamento
+            </a>
+        </div>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card card-body"> <!-- Removed bg-dark -->
+            <form method="get" action="{% url 'consultor_dashboard' %}">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="filter-month" class="form-label">Mês de Previsão de Fechamento</label>
+                        <select class="form-select" id="filter-month" name="month">
+                            <option value="">Todos</option>
+                            {% for month in available_months %}
+                                <option value="{{ month.month }}" {% if selected_month == month.month|stringformat:"s" %}selected{% endif %}>{{ month|date:"F" }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filter-cliente" class="form-label">Cliente</label>
+                        <select id="filter-cliente" name="cliente">
+                            <option value="">Todos</option>
+                            {% for cliente in all_clientes %}
+                                <option value="{{ cliente.id }}" {% if selected_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome_completo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filter-especificador" class="form-label">Especificador</label>
+                        <select id="filter-especificador" name="especificador">
+                            <option value="">Todos</option>
+                            {% for especificador in all_especificadores %}
+                                <option value="{{ especificador.id }}" {% if selected_especificador == especificador.id|stringformat:"s" %}selected{% endif %}>{{ especificador.nome_completo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filter-semana" class="form-label">Semana de Fechamento</label>
+                        <select class="form-select" id="filter-semana" name="semana" multiple>
+                            <option value="Semana 1" {% if "Semana 1" in selected_semanas %}selected{% endif %}>Semana 1</option>
+                            <option value="Semana 2" {% if "Semana 2" in selected_semanas %}selected{% endif %}>Semana 2</option>
+                            <option value="Semana 3" {% if "Semana 3" in selected_semanas %}selected{% endif %}>Semana 3</option>
+                            <option value="Semana 4" {% if "Semana 4" in selected_semanas %}selected{% endif %}>Semana 4</option>
+                            <option value="Semana 5" {% if "Semana 5" in selected_semanas %}selected{% endif %}>Semana 5</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'consultor_dashboard' %}" class="btn btn-secondary">Limpar</a>
+            </form>
+        </div>
+    </div>
+
+
+    <div class="card">
+        <div class="card-header">
+            Seus Orçamentos Recentes
+        </div>
+        <div class="card-body">
+            {% if orcamentos %}
+                <div class="table-responsive">
+                    <table class="table table-striped"> <!-- Removed table-dark -->
+                        <thead>
+                            <tr>
+                                <th>Nº Orçamento</th>
+                                <th>Cliente</th>
+                                <th>Especificador</th>
+                                <th>Valor</th>
+                                <th>Etapa</th>
+                                <th>Termômetro</th>
+                                <th>Previsão de Fechamento</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for orcamento in orcamentos %}
+                                <tr>
+                                    <td>{{ orcamento.numero_orcamento }}</td>
+                                    <td>{{ orcamento.nome_cliente.nome_completo }}</td>
+                                    <td>{{ orcamento.especificador.nome_completo }}</td>
+                                    <td>R$ {{ orcamento.valor_orcamento|floatformat:2 }}</td>
+                                    <td>{{ orcamento.etapa }}</td>
+                                    <td>
+                                        {% if orcamento.termometro == 'Quente' %}
+                                            <i class="fas fa-fire text-danger"></i>
+                                        {% elif orcamento.termometro == 'Morno' %}
+                                            <i class="fas fa-thermometer-half text-warning"></i>
+                                        {% else %}
+                                            <i class="fas fa-snowflake text-info"></i>
+                                        {% endif %}
+                                        {{ orcamento.termometro }}
+                                    </td>
+                                    <td>{{ orcamento.data_previsao_fechamento|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'edit_orcamento' orcamento.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                        {% if orcamento.etapa != 'Fechada e Ganha' %}
+                                            <form action="{% url 'marcar_como_ganho' orcamento.pk %}" method="post" style="display:inline;" class="marcar-ganho-form">
+                                                {% csrf_token %}
+                                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#confirmMarcarComoGanhoModal" title="Marcar como Ganho">✓</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>Nenhum orçamento cadastrado ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Marcar como Ganho -->
+<div class="modal fade" id="confirmMarcarComoGanhoModal" tabindex="-1" aria-labelledby="confirmMarcarComoGanhoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmMarcarComoGanhoModalLabel">Confirmar Ação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza de que deseja marcar este orçamento como "Fechada e Ganha"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="confirmGanhoBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Adicionar Cliente -->
+<div class="modal fade" id="addClienteModal" tabindex="-1" aria-labelledby="addClienteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addClienteModalLabel">Adicionar Novo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-cliente-full-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_nome_completo_cliente" class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="id_nome_completo_cliente" name="nome_completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_cpf_cnpj_cliente" class="form-label">CPF/CNPJ</label>
+                        <input type="text" class="form-control" id="id_cpf_cnpj_cliente" name="cpf_cnpj">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_telefone_cliente" class="form-label">Número do Celular</label>
+                        <input type="text" class="form-control" id="id_telefone_cliente" name="telefone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_email_cliente" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="id_email_cliente" name="email">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-dark">Salvar Cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    // Script para Tom-Select
+    new TomSelect('#filter-cliente', { create: false });
+    new TomSelect('#filter-especificador', { create: false });
+    new TomSelect('#filter-semana', {
+        plugins: ['remove_button'],
+        create: false
+    });
+
+    // Lógica para o modal de confirmação "Marcar como Ganho"
+    const confirmModal = document.getElementById('confirmMarcarComoGanhoModal');
+    if (confirmModal) {
+        let formToSubmit;
+
+        confirmModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            formToSubmit = button.closest('.marcar-ganho-form');
+        });
+
+        const confirmBtn = document.getElementById('confirmGanhoBtn');
+        confirmBtn.addEventListener('click', function () {
+            if (formToSubmit) {
+                formToSubmit.submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

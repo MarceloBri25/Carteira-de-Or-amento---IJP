@@ -1,0 +1,176 @@
+{% extends "home.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Seus Orçamentos Fechados e Ganhos</h2>
+        <button type="button" class="btn btn-outline-secondary btn-md" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+            <i class="fas fa-filter"></i> Filtros
+        </button>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card card-body">
+            <form method="get" action="{% url 'consultor_orcamentos_fechados_ganhos' %}">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-year" class="form-label">Ano de Fechamento</label>
+                        <select class="form-select" id="filter-year" name="year">
+                            <option value="">Todos</option>
+                            {% for year_num in available_years %}
+                                <option value="{{ year_num }}" {% if request.GET.year|default:"" == year_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ year_num }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-month" class="form-label">Mês de Fechamento</label>
+                        <select class="form-select" id="filter-month" name="month">
+                            <option value="">Todos</option>
+                            {% for month_num in 12|get_range %}
+                                <option value="{{ month_num }}" {% if request.GET.month|default:"" == month_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ month_num|month_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-especificador" class="form-label">Especificador</label>
+                        <select id="filter-especificador" name="especificador">
+                            <option value="">Todos</option>
+                            {% for especificador in all_especificadores %}
+                                <option value="{{ especificador.id }}" {% if request.GET.especificador|default:"" == especificador.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ especificador.nome_completo }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-cliente" class="form-label">Cliente</label>
+                        <select id="filter-cliente" name="cliente">
+                            <option value="">Todos</option>
+                            {% for cliente in all_clientes %}
+                                <option value="{{ cliente.id }}" {% if request.GET.cliente|default:"" == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cliente.nome_completo }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-dark me-2"><i class="fas fa-filter"></i> Filtrar</button>
+                <a href="{% url 'consultor_orcamentos_fechados_ganhos' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Limpar</a>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Orçamentos Fechados e Ganhos
+        </div>
+        <div class="card-body">
+            {% if orcamentos %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nº Orçamento</th>
+                                <th>Cliente</th>
+                                <th>Especificador</th>
+                                <th>Valor</th>
+                                <th>Etapa</th>
+                                <th>Data Fechada e Ganha</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for orcamento in orcamentos %}
+                                <tr>
+                                    <td>{{ orcamento.numero_orcamento }}</td>
+                                    <td>{{ orcamento.nome_cliente.nome_completo }}</td>
+                                    <td>{{ orcamento.especificador.nome_completo }}</td>
+                                    <td>R$ {{ orcamento.valor_orcamento|floatformat:2 }}</td>
+                                    <td>{{ orcamento.etapa }}</td>
+                                    <td>{{ orcamento.data_fechada_ganha|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <form action="{% url 'reverter_orcamento_ganho' orcamento.pk %}" method="post" class="reverter-ganho-form" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#confirmReverterModal" title="Reverter para Carteira">
+                                                Reverter
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>Nenhum orçamento "Fechada e Ganha" encontrado.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Reverter -->
+<div class="modal fade" id="confirmReverterModal" tabindex="-1" aria-labelledby="confirmReverterModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmReverterModalLabel">Confirmar Reversão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza de que deseja reverter este orçamento? Ele voltará para a sua carteira principal como "Em negociação".
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmReverterBtn">Confirmar Reversão</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    new TomSelect('#filter-cliente', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+    new TomSelect('#filter-especificador', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+
+    const confirmReverterModal = document.getElementById('confirmReverterModal');
+    if (confirmReverterModal) {
+        let formToSubmit;
+
+        confirmReverterModal.addEventListener('show.bs.modal', event => {
+            formToSubmit = event.relatedTarget.closest('.reverter-ganho-form');
+        });
+
+        const confirmReverterBtn = document.getElementById('confirmReverterBtn');
+        confirmReverterBtn.addEventListener('click', () => {
+            if (formToSubmit) {
+                formToSubmit.submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

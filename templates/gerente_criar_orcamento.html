@@ -1,0 +1,239 @@
+{% extends "home.html" %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<div class="container mt-5">
+    <h2>Criar Novo Orçamento</h2>
+    <form method="post" action="{% url 'gerente_criar_orcamento' %}">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="consultor" class="form-label">Consultor</label>
+                <select id="consultor" name="consultor" class="form-control" required>
+                    <option value="">Selecione o consultor</option>
+                    {% for consultor in consultores %}
+                    <option value="{{ consultor.id }}">{{ consultor.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="data_solicitacao" class="form-label">Data de Solicitação</label>
+                <input type="date" class="form-control" id="data_solicitacao" name="data_solicitacao" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="especificador" class="form-label">Especificador (Arquiteto)</label>
+                <div class="input-group">
+                    <select id="especificador" name="especificador" required>
+                        {% for especificador in all_especificadores %}
+                            <option value="{{ especificador.id }}">{{ especificador.nome_completo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="categoria" class="form-label">Categoria</label>
+                <select class="form-select" id="categoria" name="categoria" required>
+                    {% for value, name in category_choices %}
+                        <option value="{{ value }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="nome_cliente" class="form-label">Nome do Cliente</label>
+                <div class="input-group">
+                    <select id="nome_cliente" name="nome_cliente" required>
+                        {% for cliente in all_clientes %}
+                            <option value="{{ cliente.id }}">{{ cliente.nome_completo }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#addClienteModal" id="add-cliente-btn">+</button>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="numero_orcamento" class="form-label">Número do Orçamento</label>
+                <input type="text" class="form-control" id="numero_orcamento" name="numero_orcamento" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="data_envio" class="form-label">Data do Envio do Orçamento</label>
+                <input type="date" class="form-control" id="data_envio" name="data_envio">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="valor_orcamento" class="form-label">Valor do Orçamento (R$)</label>
+                <input type="number" step="0.01" class="form-control" id="valor_orcamento" name="valor_orcamento" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="termometro" class="form-label">Termômetro</label>
+                <select class="form-select" id="termometro" name="termometro" required>
+                    {% for value, name in thermometer_choices %}
+                        <option value="{{ value }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="data_previsao_fechamento" class="form-label">Previsão de Fechamento</label>
+                <input type="date" class="form-control" id="data_previsao_fechamento" name="data_previsao_fechamento">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="semana_previsao_fechamento" class="form-label">Semana da Previsão</label>
+                <select class="form-select" id="semana_previsao_fechamento" name="semana_previsao_fechamento">
+                    <option value="Semana 1">Semana 1</option>
+                    <option value="Semana 2">Semana 2</option>
+                    <option value="Semana 3">Semana 3</option>
+                    <option value="Semana 4">Semana 4</option>
+                    <option value="Semana 5">Semana 5</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="etapa" class="form-label">Etapa</label>
+                <select class="form-select" id="etapa" name="etapa" required>
+                    {% for value, name in stage_choices %}
+                        <option value="{{ value }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="data_fechada_ganha" class="form-label">Data Fechada e Ganha</label>
+                <input type="date" class="form-control" id="data_fechada_ganha" name="data_fechada_ganha">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="jornada_cliente" class="form-label">Jornada do Cliente (Observações)</label>
+            <textarea class="form-control" id="jornada_cliente" name="jornada_cliente" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-dark">Salvar Orçamento</button>
+    </form>
+</div>
+
+<!-- Modal para Adicionar Cliente -->
+<div class="modal fade" id="addClienteModal" tabindex="-1" aria-labelledby="addClienteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addClienteModalLabel">Adicionar Novo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-cliente-full-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_nome_completo_cliente" class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="id_nome_completo_cliente" name="nome_completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_cpf_cnpj_cliente" class="form-label">CPF/CNPJ</label>
+                        <input type="text" class="form-control" id="id_cpf_cnpj_cliente" name="cpf_cnpj">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_telefone_cliente" class="form-label">Número do Celular</label>
+                        <input type="text" class="form-control" id="id_telefone_cliente" name="telefone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_email_cliente" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="id_email_cliente" name="email">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-dark">Salvar Cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Erro de Duplicidade -->
+<div class="modal fade" id="duplicateErrorModal" tabindex="-1" aria-labelledby="duplicateErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="duplicateErrorModalLabel">Erro de Duplicidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Já existe um orçamento com o número "{{ duplicate_numero }}".
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Erro CPF/CNPJ -->
+<div class="modal fade" id="cpfCnpjErrorModal" tabindex="-1" aria-labelledby="cpfCnpjErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cpfCnpjErrorModalLabel">Erro de Duplicidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                O CPF/CNPJ informado já está cadastrado no sistema.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new TomSelect('#especificador', { create: false });
+    new TomSelect('#nome_cliente', { create: false });
+    new TomSelect('#consultor', { create: false });
+
+    // Script para o modal de adicionar cliente
+    const addClienteModalElement = document.getElementById('addClienteModal');
+    const addClienteModal = new bootstrap.Modal(addClienteModalElement);
+    const addClienteFullForm = document.getElementById('add-cliente-full-form');
+    const cpfCnpjErrorModal = new bootstrap.Modal(document.getElementById('cpfCnpjErrorModal'));
+
+    addClienteFullForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        fetch('{% url "add_cliente_full" %}', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200) {
+                const clienteSelect = document.getElementById('nome_cliente').tomselect;
+                clienteSelect.addOption({ value: body.id, text: body.nome_completo });
+                clienteSelect.setValue(body.id);
+                addClienteModal.hide();
+                addClienteFullForm.reset(); // Clear the form
+            } else if (body.error) {
+                if (body.error === 'CPF/CNPJ já cadastrado.') {
+                    cpfCnpjErrorModal.show();
+                } else {
+                    alert(body.error);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ocorreu um erro ao adicionar o cliente.');
+        });
+    });
+
+    {% if duplicate_error %}
+    var myModal = new bootstrap.Modal(document.getElementById('duplicateErrorModal'), {});
+    myModal.show();
+    {% endif %}
+});
+</script>
+{% endblock %}

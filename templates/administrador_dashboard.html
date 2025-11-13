@@ -1,0 +1,401 @@
+{% extends 'home.html' %}
+{% load custom_filters %}
+
+{% block title %}Dashboard do Administrador{% endblock %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Dashboard do Administrador</h2>
+        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+            <i class="fas fa-filter me-2"></i>Filtros
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card card-body">
+            <form method="get" action="{% url 'administrador_dashboard' %}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="year-filter" class="form-label">Ano</label>
+                        <select name="year" id="year-filter" class="form-select">
+                            <option value="">Todos os anos</option>
+                            {% for year in available_years %}
+                                <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="month-filter" class="form-label">Mês</label>
+                        <select name="month" id="month-filter" class="form-select">
+                            <option value="">Todos os meses</option>
+                            {% for month_num, month_name in months_choices.items %}
+                                <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="loja-filter" class="form-label">Loja</label>
+                        <select name="loja" id="loja-filter" class="form-select" multiple>
+                            {% for loja in lojas %}
+                                <option value="{{ loja }}" {% if loja in selected_lojas %}selected{% endif %}>{{ loja }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                        <a href="{% url 'administrador_dashboard' %}" class="btn btn-secondary">Limpar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h4>Visão Geral</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-wallet fa-2x text-primary me-3"></i>
+                            <div>
+                                <h6 class="mb-0 text-muted">Valor Total da Carteira</h6>
+                                <h4 class="mb-0">R$ {{ total_orcamento|br_format }}</h4>
+                                <small class="text-muted">{{ total_orcamento_quantidade }} orçamentos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                            <div>
+                                <h6 class="mb-0 text-muted">Total Fechado e Ganho</h6>
+                                <h4 class="mb-0">R$ {{ total_fechada_ganha_value|br_format }}</h4>
+                                <small class="text-muted">{{ total_fechada_ganha_quantidade }} orçamentos</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-4">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Orçamentos Quentes</h6>
+                            <h4 class="mb-0"><i class="fas fa-fire text-danger"></i> {{ orcamentos_quentes }}</h4>
+                            <small class="text-muted">R$ {{ total_quentes_value|br_format }}</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Orçamentos Mornos</h6>
+                            <h4 class="mb-0"><i class="fas fa-thermometer-half text-warning"></i> {{ orcamentos_mornos }}</h4>
+                            <small class="text-muted">R$ {{ total_mornos_value|br_format }}</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Orçamentos Frios</h6>
+                            <h4 class="mb-0"><i class="fas fa-snowflake text-info"></i> {{ orcamentos_frios }}</h4>
+                            <small class="text-muted">R$ {{ total_frios_value|br_format }}</small>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Total de Orçamentos Perdidos</h6>
+                            <h4 class="mb-0"><i class="fas fa-thumbs-down text-danger"></i> {{ total_perdido_mes_quantidade }}</h4>
+                            <small class="text-muted">R$ {{ total_perdido_mes_valor|br_format }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h4>Métrica do Mês</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-plus-circle fa-2x text-primary me-3"></i>
+                            <div>
+                                <h6 class="mb-0 text-muted">Novos Orçamentos do Mês</h6>
+                                <h4 class="mb-0">R$ {{ total_novos_orcamentos_mes_valor|br_format }}</h4>
+                                <small class="text-muted">{{ total_novos_orcamentos_mes_quantidade }} orçamentos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-trophy fa-2x text-success me-3"></i>
+                            <div>
+                                <h6 class="mb-0 text-muted">Total Fechado e Ganho no Mês</h6>
+                                <h4 class="mb-0">{{ total_fechada_ganha_mes_quantidade }}</h4>
+                                <small class="text-muted">R$ {{ total_fechada_ganha_mes_valor|br_format }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-4">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Orçamentos Quentes do Mês</h6>
+                            <h4 class="mb-0"><i class="fas fa-fire text-danger"></i> {{ orcamentos_quentes_mes }}</h4>
+                            <small class="text-muted">R$ {{ total_quentes_mes_valor|br_format }}</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Orçamentos Mornos do Mês</h6>
+                            <h4 class="mb-0"><i class="fas fa-thermometer-half text-warning"></i> {{ orcamentos_mornos_mes }}</h4>
+                            <small class="text-muted">R$ {{ total_mornos_mes_valor|br_format }}</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <h6 class="mb-0 text-muted">Orçamentos Frios do Mês</h6>
+                            <h4 class="mb-0"><i class="fas fa-snowflake text-info"></i> {{ orcamentos_frios_mes }}</h4>
+                            <small class="text-muted">R$ {{ total_frios_mes_valor|br_format }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Gráficos Principais -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Desempenho dos Consultores</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for consultant in consultant_performance %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if forloop.counter == 1 %}
+                                        <i class="fas fa-trophy text-warning"></i>
+                                    {% elif forloop.counter == 2 %}
+                                        <i class="fas fa-trophy text-secondary"></i>
+                                    {% elif forloop.counter == 3 %}
+                                        <i class="fas fa-trophy" style="color: #cd7f32;"></i>
+                                    {% else %}
+                                        <span class="text-muted">{{ forloop.counter }}º</span>
+                                    {% endif %}
+                                    {{ consultant.username }}
+                                </h5>
+                                <small class="text-muted">Total em Carteira: R$ {{ consultant.total_carteira|floatformat:2|br_format }}</small>
+                            </div>
+                            <div class="text-end">
+                                <h6 class="mb-0">Vendido:</h6>
+                                <span class="font-weight-bold">R$ {{ consultant.total_vendido|floatformat:2|br_format }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Previsão de Fechamento por Semana</div>
+                <div class="card-body">
+                    <canvas id="weeklyForecastChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos Secundários -->
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Ranking de Especificadores</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for especificador in especificadores_ranking %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if forloop.counter == 1 %}
+                                        <i class="fas fa-trophy text-warning"></i>
+                                    {% elif forloop.counter == 2 %}
+                                        <i class="fas fa-trophy text-secondary"></i>
+                                    {% elif forloop.counter == 3 %}
+                                        <i class="fas fa-trophy" style="color: #cd7f32;"></i>
+                                    {% else %}
+                                        <span class="text-muted">{{ forloop.counter }}º</span>
+                                    {% endif %}
+                                    {{ especificador.nome_completo }}
+                                </h5>
+                            </div>
+                            <div class="text-end">
+                                <h6 class="mb-0">Total Comprado:</h6>
+                                <span class="font-weight-bold">R$ {{ especificador.total_comprado|br_format }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Status dos Orçamentos</div>
+                <div class="card-body">
+                    <canvas id="thermometerChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script><script>
+    // Configurações globais do Chart.js para a nova paleta
+    Chart.defaults.font.family = 'Montserrat, sans-serif';
+    Chart.defaults.color = 'var(--primary-text)';
+
+    // Gráfico de Status (Pizza)
+    const ctx = document.getElementById('thermometerChart').getContext('2d');
+    Chart.register(ChartDataLabels); // Register the plugin
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Quente', 'Morno', 'Frio'],
+            datasets: [{
+                label: 'Status dos Orçamentos',
+                data: [{{ orcamentos_quentes }}, {{ orcamentos_mornos }}, {{ orcamentos_frios }}],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)', // Red
+                    'rgba(255, 193, 7, 0.7)', // Yellow
+                    'rgba(23, 162, 184, 0.7)'  // Blue
+                ],
+                borderColor: [
+                    '#dc3545',
+                    '#ffc107',
+                    '#17a2b8'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => {
+                            sum += data;
+                        });
+                        let percentage = (value * 100 / sum).toFixed(2) + "%";
+                        return percentage;
+                    },
+                    color: '#fff',
+                    font: {
+                        weight: 'bold'
+                    }
+                }
+            }
+        }
+    });
+
+
+
+    // Gráfico de Previsão Semanal (Barras Empilhadas)
+    const weeklyCtx = document.getElementById('weeklyForecastChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ weekly_labels|safe }},
+            datasets: [
+                {
+                    label: 'Quente',
+                    data: {{ quente_data|safe }},
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)', // Red
+                },
+                {
+                    label: 'Morno',
+                    data: {{ morno_data|safe }},
+                    backgroundColor: 'rgba(255, 193, 7, 0.7)', // Yellow
+                },
+                {
+                    label: 'Frio',
+                    data: {{ frio_data|safe }},
+                    backgroundColor: 'rgba(23, 162, 184, 0.7)', // Blue
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value, index, values) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                            }
+                            return label;
+                        }
+                    }
+                },
+                datalabels: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    new TomSelect('#loja-filter', {
+        plugins: ['remove_button'],
+        placeholder: 'Selecione uma ou mais lojas',
+        create: false
+    });
+</script>
+{% endblock %}

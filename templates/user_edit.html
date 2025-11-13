@@ -1,0 +1,82 @@
+{% extends 'home.html' %}
+
+{% block title %}Carteira IJP - Editar Usuário{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Editar Usuário: {{ user.username }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        <div class="mb-3">
+                            <label for="id_first_name" class="form-label">Nome</label>
+                            {{ form.first_name }}
+                            {{ form.first_name.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_last_name" class="form-label">Sobrenome</label>
+                            {{ form.last_name }}
+                            {{ form.last_name.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email</label>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_role" class="form-label">Cargo</label>
+                            {{ form.role }}
+                            {{ form.role.errors }}
+                        </div>
+                        <div class="mb-3" id="loja-group">
+                            <label for="id_loja" class="form-label">Loja</label>
+                            <select class="form-select" name="loja" id="id_loja">
+                                <option value="">---------</option>
+                                {% for loja in lojas %}
+                                    <option value="{{ loja.pk }}" {% if form.loja.value == loja.pk %}selected{% endif %}>{{ loja.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            {{ form.loja.errors }}
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleSelect = document.getElementById('id_role');
+        const lojaGroup = document.getElementById('loja-group');
+        const lojaSelect = document.getElementById('id_loja');
+
+        function toggleLojaField() {
+            const selectedRole = roleSelect.value;
+            if (selectedRole === 'consultor' || selectedRole === 'gerente') {
+                lojaGroup.style.display = 'block';
+            } else {
+                lojaGroup.style.display = 'none';
+                lojaSelect.value = ''; // Clear selected value when hidden
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleLojaField);
+
+        // Initial check in case of pre-filled form or page refresh
+        toggleLojaField();
+    });
+</script>
+{% endblock %}

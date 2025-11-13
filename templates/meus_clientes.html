@@ -1,0 +1,215 @@
+
+{% extends "home.html" %}
+{% load custom_filters %}
+
+{% block title %}Meus Orçamentos{% endblock %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+.client-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: box-shadow .3s ease;
+}
+.client-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.client-card-header {
+    background-color: #f5f5f5;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+.client-card-header h5 {
+    margin: 0;
+    font-weight: 700;
+}
+.client-card-body {
+    padding: 20px;
+}
+.client-card-footer {
+    background-color: #f5f5f5;
+    padding: 10px 20px;
+    text-align: right;
+    font-weight: 700;
+}
+.jornada-cliente-container {
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+}
+.chat-history {
+    max-height: 300px; /* Adjust as needed */
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+.chat-history p {
+    word-wrap: break-word;
+}
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Meus Orçamentos</h2>
+        <button type="button" class="btn btn-outline-secondary btn-md" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+            <i class="fas fa-filter"></i> Filtros
+        </button>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card card-body">
+            <form method="get" action="{% if user.role == 'gerente' %}{% url 'meus_clientes_gerente' %}{% elif user.role == 'consultor' %}{% url 'meus_clientes_consultor' %}{% elif user.role == 'administrador' %}{% url 'meus_clientes_administrador' %}{% endif %}">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-year" class="form-label">Ano de Fechamento</label>
+                        <select class="form-select" id="filter-year" name="year">
+                            <option value="">Todos</option>
+                            {% for year_num in available_years %}
+                                <option value="{{ year_num }}" {% if request.GET.year|default:"" == year_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ year_num }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-month" class="form-label">Mês de Fechamento</label>
+                        <select class="form-select" id="filter-month" name="month">
+                            <option value="">Todos</option>
+                            {% for month_num in 12|get_range %}
+                                <option value="{{ month_num }}" {% if request.GET.month|default:"" == month_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ month_num|month_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-especificador" class="form-label">Especificador</label>
+                        <select id="filter-especificador" name="especificador">
+                            <option value="">Todos</option>
+                            {% for especificador in all_especificadores %}
+                                <option value="{{ especificador.id }}" {% if request.GET.especificador|default:"" == especificador.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ especificador.nome_completo }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-cliente" class="form-label">Cliente</label>
+                        <select id="filter-cliente" name="cliente">
+                            <option value="">Todos</option>
+                            {% for cliente in all_clientes %}
+                                <option value="{{ cliente.id }}" {% if request.GET.cliente|default:"" == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cliente.nome_completo }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-etapa" class="form-label">Etapa</label>
+                        <select class="form-select" id="filter-etapa" name="etapa">
+                            <option value="">Todas</option>
+                            {% for value, name in stage_choices %}
+                                <option value="{{ value }}" {% if request.GET.etapa|default:"" == value %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="filter-termometro" class="form-label">Status</label>
+                        <select class="form-select" id="filter-termometro" name="termometro">
+                            <option value="">Todos</option>
+                            {% for value, name in thermometer_choices %}
+                                <option value="{{ value }}" {% if request.GET.termometro|default:"" == value %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-dark me-2"><i class="fas fa-filter"></i> Filtrar</button>
+                <a href="{% if user.role == 'gerente' %}{% url 'meus_clientes_gerente' %}{% elif user.role == 'consultor' %}{% url 'meus_clientes_consultor' %}{% endif %}" class="btn btn-secondary"><i class="fas fa-times"></i> Limpar</a>
+            </form>
+        </div>
+    </div>
+
+    {% for orcamento in orcamentos %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="client-card">
+                <div class="client-card-header">
+                    <h5>{{ orcamento.nome_cliente.nome_completo }}</h5>
+                </div>
+                <div class="client-card-body">
+                    <p><strong>Especificador:</strong> {{ orcamento.especificador.nome_completo|default:"N/A" }}</p>
+                    <p><strong>Valor do Orçamento:</strong> R$ {{ orcamento.valor_orcamento|br_format }}</p>
+                    <p><strong>Consultor:</strong> {{ orcamento.usuario.get_full_name|default:orcamento.usuario.username }}</p>
+                    <p><strong>Data de Solicitação:</strong> {{ orcamento.data_solicitacao|date:"d/m/Y" }}</p>
+                    {% if orcamento.data_fechada_ganha %}
+                        <p><strong>Data Fechada e Ganha:</strong> {{ orcamento.data_fechada_ganha|date:"d/m/Y" }}</p>
+                    {% else %}
+                        <p><strong>Data Fechada e Ganha:</strong> Em aberto</p>
+                    {% endif %}
+                </div>
+                <div class="client-card-footer">
+                    {% if orcamento.dias_para_fechar is not None %}
+                        <strong>{{ orcamento.dias_para_fechar }} dias para fechar</strong>
+                    {% elif orcamento.dias_em_aberto is not None %}
+                        <strong>Em aberto por {{ orcamento.dias_em_aberto }} dias</strong>
+                    {% else %}
+                        <span>-</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="jornada-cliente-container h-100 d-flex flex-column">
+                <h5>Jornada do Cliente</h5>
+                <div class="chat-history flex-grow-1 overflow-auto p-3 mb-3 bg-light rounded">
+                    {% for item in orcamento.jornada_completa %}
+                        <div class="mb-2">
+                            <strong>{{ item.usuario.username }}</strong> em {{ item.data|date:"d/m/Y" }}:
+                            <p class="mb-0">{{ item.comentario }}</p>
+                        </div>
+                    {% endfor %}
+                    {% if not orcamento.jornada_completa %}
+                        <p>Nenhum histórico de jornada do cliente.</p>
+                    {% endif %}
+                </div>
+                <form method="post" action="{% url 'add_jornada_cliente_comment' orcamento.pk %}" class="mt-auto">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <textarea name="comentario" class="form-control" placeholder="Adicionar comentário..." rows="2" required></textarea>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    new TomSelect('#filter-cliente', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+    new TomSelect('#filter-especificador', {
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+</script>
+{% endblock %}
