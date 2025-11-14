@@ -430,14 +430,36 @@ def gerente_dashboard(request):
 def gerente_criar_orcamento(request):
     if request.method == 'POST':
         form = OrcamentoForm(request.POST)
-        if form.is_valid():
+        consultor_id = request.POST.get('consultor')
+
+        if not consultor_id:
+            messages.error(request, 'Por favor, selecione um consultor.')
+        elif form.is_valid():
             orcamento = form.save(commit=False)
-            orcamento.usuario = request.user
+            consultor = get_object_or_404(User, id=consultor_id)
+            orcamento.usuario = consultor
             orcamento.save()
+            messages.success(request, 'Orçamento criado com sucesso!')
             return redirect('gerente_dashboard')
-    else:
-        form = OrcamentoForm()
-    return render(request, 'gerente_criar_orcamento.html', {'form': form})
+
+    # If we are here, it's either a GET request or the form was invalid.
+    form = OrcamentoForm(request.POST or None)
+    consultores = User.objects.filter(role='consultor', loja=request.user.loja)
+    especificadores = Especificador.objects.all()
+    clientes = Cliente.objects.all()
+    category_choices = Orcamento.CATEGORY_CHOICES
+    thermometer_choices = Orcamento.THERMOMETER_CHOICES
+    stage_choices = Orcamento.STAGE_CHOICES
+    context = {
+        'form': form,
+        'consultores': consultores,
+        'all_especificadores': especificadores,
+        'all_clientes': clientes,
+        'category_choices': category_choices,
+        'thermometer_choices': thermometer_choices,
+        'stage_choices': stage_choices,
+    }
+    return render(request, 'gerente_criar_orcamento.html', context)
 
 @login_required
 def administrador_criar_orcamento(request):
@@ -999,10 +1021,6 @@ def orcamentos_fechados_view(request):
 
     orcamentos = Orcamento.objects.filter(etapa='Fechada e Ganha')
 
-    # Apply role-based filtering first
-    if user.role == 'gerente':
-        orcamentos = orcamentos.filter(usuario__loja=user.loja)
-
     # Get filter parameters
     selected_cliente = request.GET.get('cliente')
     selected_consultor = request.GET.get('consultor')
@@ -1025,7 +1043,7 @@ def orcamentos_fechados_view(request):
     # Get filter options
     all_clientes = Cliente.objects.filter(orcamento__in=orcamentos).distinct()
     all_consultores = User.objects.filter(role='consultor', orcamento__in=orcamentos).distinct()
-    all_lojas = Loja.objects.filter(user__orcamento__in=orcamentos).distinct()
+    all_lojas = Loja.objects.all() # Show all stores for filtering
     available_months = Orcamento.objects.filter(etapa='Fechada e Ganha').dates('data_fechada_ganha', 'month', order='ASC')
     available_years = Orcamento.objects.filter(etapa='Fechada e Ganha').dates('data_fechada_ganha', 'year', order='DESC')
     
