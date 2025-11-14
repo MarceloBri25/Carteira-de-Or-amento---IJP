@@ -283,105 +283,102 @@ def edit_orcamento(request, pk):
 
 @login_required
 def gerente_dashboard(request):
-    if 'debug' in request.GET:
-        gerente_loja = request.user.loja
-        orcamentos = Orcamento.objects.filter(usuario__loja=gerente_loja)
-        consultant_performance = orcamentos.values('usuario__username').annotate(
-            total_carteira=Sum('valor_orcamento'),
-            total_vendido=Sum('valor_orcamento', filter=models.Q(etapa='Fechada e Ganha'))
-            ).order_by('-total_vendido')
-        
-        consultant_labels = [item['usuario__username'] for item in consultant_performance]
-        consultant_carteira = [item['total_carteira'] for item in consultant_performance]
-        consultant_vendido = [item['total_vendido'] for item in consultant_performance]
-        weekly_forecast = orcamentos.values('semana_previsao_fechamento').annotate(
-            total_valor=Sum('valor_orcamento'),
-            count=Count('id')
-        ).order_by('semana_previsao_fechamento')
-        weekly_forecast_labels = [item['semana_previsao_fechamento'] for item in weekly_forecast]
-        weekly_forecast_values = [item['total_valor'] for item in weekly_forecast]
-        weekly_forecast_counts = [item['count'] for item in weekly_forecast]
-        debug_data = {
-            'gerente_loja': gerente_loja.nome if gerente_loja else None,
-            'orcamentos_count': orcamentos.count(),
-            'consultant_labels': consultant_labels,
-            'consultant_carteira': [float(c) if c else 0 for c in consultant_carteira],
-            'consultant_vendido': [float(v) if v else 0 for v in consultant_vendido],
-            'weekly_forecast_labels': weekly_forecast_labels,
-            'weekly_forecast_values': [float(v) if v else 0 for v in weekly_forecast_values],
-            'weekly_forecast_counts': weekly_forecast_counts,
-        }
-        return JsonResponse(debug_data)
-
     # Get the current manager's loja
     gerente_loja = request.user.loja
+    if not gerente_loja:
+        # Redirect or show an error if the manager is not associated with a loja
+        return redirect('home')
 
     # Get filter parameters from request
     selected_year = request.GET.get('year', str(datetime.now().year))
     selected_month = request.GET.get('month', str(datetime.now().month))
 
-    # Start with orcamentos from the manager's loja
-    orcamentos = Orcamento.objects.filter(usuario__loja=gerente_loja)
+    # Base queryset for the manager's loja
+    orcamentos_loja = Orcamento.objects.filter(usuario__loja=gerente_loja)
 
-    # Apply filters
+    # --- VISÃO GERAL ---
+    orcamentos_geral = orcamentos_loja
     if selected_year:
-        orcamentos = orcamentos.filter(data_previsao_fechamento__year=selected_year)
+        orcamentos_geral = orcamentos_geral.filter(data_previsao_fechamento__year=selected_year)
     if selected_month:
-        orcamentos = orcamentos.filter(data_previsao_fechamento__month=selected_month)
+        orcamentos_geral = orcamentos_geral.filter(data_previsao_fechamento__month=selected_month)
 
-    # Calculate metrics for open budgets
-    orcamentos_abertos = orcamentos.exclude(etapa__in=['Fechada e Ganha', 'Perdida'])
+    orcamentos_abertos = orcamentos_geral.exclude(etapa__in=['Fechada e Ganha', 'Perdida'])
     total_orcamento = orcamentos_abertos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
     total_orcamento_quantidade = orcamentos_abertos.count()
 
     orcamentos_quentes = orcamentos_abertos.filter(termometro='Quente').count()
     total_quentes_value = orcamentos_abertos.filter(termometro='Quente').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-
     orcamentos_mornos = orcamentos_abertos.filter(termometro='Morno').count()
     total_mornos_value = orcamentos_abertos.filter(termometro='Morno').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-
     orcamentos_frios = orcamentos_abertos.filter(termometro='Frio').count()
     total_frios_value = orcamentos_abertos.filter(termometro='Frio').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
 
-    # Calculate metrics for "Fechada e Ganha"
-    orcamentos_ganhos = orcamentos.filter(etapa='Fechada e Ganha')
+    orcamentos_ganhos = orcamentos_geral.filter(etapa='Fechada e Ganha')
     total_fechada_ganha_value = orcamentos_ganhos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
     total_fechada_ganha_quantidade = orcamentos_ganhos.count()
 
-    # Monthly metrics
-    total_perdido_mes_quantidade = orcamentos.filter(etapa='Perdida').count()
-    total_perdido_mes_valor = orcamentos.filter(etapa='Perdida').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+    orcamentos_perdidos = orcamentos_geral.filter(etapa='Perdida')
+    total_perdido_mes_quantidade = orcamentos_perdidos.count()
+    total_perdido_mes_valor = orcamentos_perdidos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
 
-    # Chart data
+    # --- MÉTRICA DO MÊS ---
+    orcamentos_mes = orcamentos_loja
+    if selected_year:
+        orcamentos_mes = orcamentos_mes.filter(data_solicitacao__year=selected_year)
+    if selected_month:
+        orcamentos_mes = orcamentos_mes.filter(data_solicitacao__month=selected_month)
+
+    total_novos_orcamentos_mes_quantidade = orcamentos_mes.count()
+    total_novos_orcamentos_mes_valor = orcamentos_mes.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+    total_fechada_ganha_mes_quantidade = orcamentos_mes.filter(etapa='Fechada e Ganha').count()
+    total_fechada_ganha_mes_valor = orcamentos_mes.filter(etapa='Fechada e Ganha').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+    orcamentos_quentes_mes = orcamentos_mes.filter(termometro='Quente').count()
+    total_quentes_mes_valor = orcamentos_mes.filter(termometro='Quente').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+    orcamentos_mornos_mes = orcamentos_mes.filter(termometro='Morno').count()
+    total_mornos_mes_valor = orcamentos_mes.filter(termometro='Morno').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+    orcamentos_frios_mes = orcamentos_mes.filter(termometro='Frio').count()
+    total_frios_mes_valor = orcamentos_mes.filter(termometro='Frio').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+
+    # --- DESEMPENHO DOS CONSULTORES ---
     consultants = User.objects.filter(loja=gerente_loja, role='consultor')
-    
     consultant_performance_data = []
     for consultant in consultants:
-        orcamentos_consultant = orcamentos.filter(usuario=consultant)
-        total_carteira = orcamentos_consultant.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        orcamentos_consultant = orcamentos_geral.filter(usuario=consultant)
+        total_carteira = orcamentos_consultant.exclude(etapa__in=['Fechada e Ganha', 'Perdida']).aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
         total_vendido = orcamentos_consultant.filter(etapa='Fechada e Ganha').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
         consultant_performance_data.append({
             'username': consultant.username,
             'total_carteira': total_carteira,
             'total_vendido': total_vendido,
         })
-
     consultant_performance = sorted(consultant_performance_data, key=lambda x: x['total_vendido'], reverse=True)
 
-    consultant_labels = [item['username'] for item in consultant_performance]
-    consultant_carteira = [float(item['total_carteira']) for item in consultant_performance]
-    consultant_vendido = [float(item['total_vendido']) for item in consultant_performance]
-
-    weekly_forecast = orcamentos.values('semana_previsao_fechamento').annotate(
-        total_valor=Sum('valor_orcamento'),
-        count=Count('id')
+    # --- PREVISÃO DE FECHAMENTO POR SEMANA (Stacked Bar Chart) ---
+    orcamentos_for_chart = orcamentos_geral.exclude(etapa__in=['Fechada e Ganha', 'Perdida'])
+    weekly_forecast_data = orcamentos_for_chart.values('semana_previsao_fechamento', 'termometro').annotate(
+        total_valor=Sum('valor_orcamento')
     ).order_by('semana_previsao_fechamento')
 
-    weekly_forecast_labels = [item['semana_previsao_fechamento'] for item in weekly_forecast]
-    weekly_forecast_values = [float(item['total_valor']) if item['total_valor'] else 0 for item in weekly_forecast]
-    weekly_forecast_counts = [item['count'] for item in weekly_forecast]
-    
-    available_years = Orcamento.objects.filter(usuario__loja=gerente_loja).dates('data_previsao_fechamento', 'year', order='DESC')
+    weekly_labels = sorted(list(orcamentos_for_chart.values_list('semana_previsao_fechamento', flat=True).distinct()))
+    quente_data = [0] * len(weekly_labels)
+    morno_data = [0] * len(weekly_labels)
+    frio_data = [0] * len(weekly_labels)
+
+    for item in weekly_forecast_data:
+        try:
+            week_index = weekly_labels.index(item['semana_previsao_fechamento'])
+            if item['termometro'] == 'Quente':
+                quente_data[week_index] = float(item['total_valor']) if item['total_valor'] else 0
+            elif item['termometro'] == 'Morno':
+                morno_data[week_index] = float(item['total_valor']) if item['total_valor'] else 0
+            elif item['termometro'] == 'Frio':
+                frio_data[week_index] = float(item['total_valor']) if item['total_valor'] else 0
+        except ValueError:
+            pass
+
+    # --- CONTEXT ---
+    available_years = orcamentos_loja.dates('data_previsao_fechamento', 'year', order='DESC')
     months_choices = {
         '1': 'Janeiro', '2': 'Fevereiro', '3': 'Março', '4': 'Abril',
         '5': 'Maio', '6': 'Junho', '7': 'Julho', '8': 'Agosto',
@@ -389,7 +386,7 @@ def gerente_dashboard(request):
     }
 
     context = {
-        'orcamentos': orcamentos,
+        # Visão Geral
         'total_orcamento': total_orcamento,
         'total_orcamento_quantidade': total_orcamento_quantidade,
         'total_fechada_ganha_value': total_fechada_ganha_value,
@@ -402,12 +399,25 @@ def gerente_dashboard(request):
         'total_frios_value': total_frios_value,
         'total_perdido_mes_quantidade': total_perdido_mes_quantidade,
         'total_perdido_mes_valor': total_perdido_mes_valor,
-        'consultant_labels': consultant_labels,
-        'consultant_carteira': consultant_carteira,
-        'consultant_vendido': consultant_vendido,
-        'weekly_forecast_labels': weekly_forecast_labels,
-        'weekly_forecast_values': weekly_forecast_values,
-        'weekly_forecast_counts': weekly_forecast_counts,
+        # Métrica do Mês
+        'total_novos_orcamentos_mes_quantidade': total_novos_orcamentos_mes_quantidade,
+        'total_novos_orcamentos_mes_valor': total_novos_orcamentos_mes_valor,
+        'total_fechada_ganha_mes_quantidade': total_fechada_ganha_mes_quantidade,
+        'total_fechada_ganha_mes_valor': total_fechada_ganha_mes_valor,
+        'orcamentos_quentes_mes': orcamentos_quentes_mes,
+        'total_quentes_mes_valor': total_quentes_mes_valor,
+        'orcamentos_mornos_mes': orcamentos_mornos_mes,
+        'total_mornos_mes_valor': total_mornos_mes_valor,
+        'orcamentos_frios_mes': orcamentos_frios_mes,
+        'total_frios_mes_valor': total_frios_mes_valor,
+        # Desempenho dos Consultores
+        'consultant_performance': consultant_performance,
+        # Previsão Semanal
+        'weekly_labels': weekly_labels,
+        'quente_data': quente_data,
+        'morno_data': morno_data,
+        'frio_data': frio_data,
+        # Filtros
         'available_years': [d.year for d in available_years],
         'selected_year': selected_year,
         'months_choices': months_choices,

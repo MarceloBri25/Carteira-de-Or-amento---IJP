@@ -17,7 +17,7 @@
         <div class="card card-body">
             <form method="get" action="{% url 'gerente_dashboard' %}">
                 <div class="row align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label for="year-filter" class="form-label">Ano</label>
                         <select name="year" id="year-filter" class="form-select">
                             {% for year in available_years %}
@@ -25,7 +25,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label for="month-filter" class="form-label">Mês</label>
                         <select name="month" id="month-filter" class="form-select">
                             <option value="">Todos os meses</option>
@@ -34,7 +34,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">Filtrar</button>
                         <a href="{% url 'gerente_dashboard' %}" class="btn btn-secondary">Limpar</a>
                     </div>
@@ -43,57 +43,124 @@
         </div>
     </div>
 
-    <!-- Métricas Principais -->
     <div class="row">
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+        <div class="col-lg-6 mb-4">
             <div class="card h-100">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Valor Total da Carteira</h6>
-                    <h5 class="card-title">R$ {{ total_orcamento|br_format }}</h5>
+                <div class="card-header">
+                    <h4>Visão Geral da Loja</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-wallet fa-2x text-primary me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 text-muted">Valor Total da Carteira</h6>
+                                    <h4 class="mb-0">R$ {{ total_orcamento|br_format }}</h4>
+                                    <small class="text-muted">{{ total_orcamento_quantidade }} orçamentos</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 text-muted">Total Fechado e Ganho</h6>
+                                    <h4 class="mb-0">R$ {{ total_fechada_ganha_value|br_format }}</h4>
+                                    <small class="text-muted">{{ total_fechada_ganha_quantidade }} orçamentos</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Orçamentos Quentes</h6>
+                                <h4 class="mb-0"><i class="fas fa-fire text-danger"></i> {{ orcamentos_quentes }}</h4>
+                                <small class="text-muted">R$ {{ total_quentes_value|br_format }}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Orçamentos Mornos</h6>
+                                <h4 class="mb-0"><i class="fas fa-thermometer-half text-warning"></i> {{ orcamentos_mornos }}</h4>
+                                <small class="text-muted">R$ {{ total_mornos_value|br_format }}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Orçamentos Frios</h6>
+                                <h4 class="mb-0"><i class="fas fa-snowflake text-info"></i> {{ orcamentos_frios }}</h4>
+                                <small class="text-muted">R$ {{ total_frios_value|br_format }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Total de Orçamentos Perdidos</h6>
+                                <h4 class="mb-0"><i class="fas fa-thumbs-down text-danger"></i> {{ total_perdido_mes_quantidade }}</h4>
+                                <small class="text-muted">R$ {{ total_perdido_mes_valor|br_format }}</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+        <div class="col-lg-6 mb-4">
             <div class="card h-100">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Total Fechado e Ganho</h6>
-                    <h5 class="card-title text-success">R$ {{ total_fechada_ganha_value|br_format }}</h5>
+                <div class="card-header">
+                    <h4>Métrica do Mês</h4>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Quentes</h6>
-                    <h5 class="card-title"><i class="fas fa-fire text-danger"></i> {{ orcamentos_quentes }}</h5>
-                    <p class="card-text text-muted"><small>R$ {{ total_quentes_value|br_format }}</small></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Mornos</h6>
-                    <h5 class="card-title"><i class="fas fa-thermometer-half text-warning"></i> {{ orcamentos_mornos }}</h5>
-                    <p class="card-text text-muted"><small>R$ {{ total_mornos_value|br_format }}</small></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Frios</h6>
-                    <h5 class="card-title"><i class="fas fa-snowflake text-info"></i> {{ orcamentos_frios }}</h5>
-                    <p class="card-text text-muted"><small>R$ {{ total_frios_value|br_format }}</small></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Orçamentos Perdidos no Mês</h6>
-                    <h5 class="card-title"><i class="fas fa-thumbs-down text-danger"></i> {{ total_perdido_mes_quantidade }}</h5>
-                    <p class="card-text text-muted"><small>R$ {{ total_perdido_mes_valor|br_format }}</small></p>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-plus-circle fa-2x text-primary me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 text-muted">Novos Orçamentos do Mês</h6>
+                                    <h4 class="mb-0">R$ {{ total_novos_orcamentos_mes_valor|br_format }}</h4>
+                                    <small class="text-muted">{{ total_novos_orcamentos_mes_quantidade }} orçamentos</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-trophy fa-2x text-success me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 text-muted">Total Fechado e Ganho no Mês</h6>
+                                    <h4 class="mb-0">{{ total_fechada_ganha_mes_quantidade }}</h4>
+                                    <small class="text-muted">R$ {{ total_fechada_ganha_mes_valor|br_format }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Orçamentos Quentes do Mês</h6>
+                                <h4 class="mb-0"><i class="fas fa-fire text-danger"></i> {{ orcamentos_quentes_mes }}</h4>
+                                <small class="text-muted">R$ {{ total_quentes_mes_valor|br_format }}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Orçamentos Mornos do Mês</h6>
+                                <h4 class="mb-0"><i class="fas fa-thermometer-half text-warning"></i> {{ orcamentos_mornos_mes }}</h4>
+                                <small class="text-muted">R$ {{ total_mornos_mes_valor|br_format }}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="mb-0 text-muted">Orçamentos Frios do Mês</h6>
+                                <h4 class="mb-0"><i class="fas fa-snowflake text-info"></i> {{ orcamentos_frios_mes }}</h4>
+                                <small class="text-muted">R$ {{ total_frios_mes_valor|br_format }}</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -104,12 +171,34 @@
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header">Desempenho dos Consultores</div>
-                <div class="card-body">
-                    {% if consultant_labels %}
-                        <canvas id="consultantPerformanceChart"></canvas>
-                    {% else %}
-                        <p class="text-center text-muted">Não há dados de desempenho para exibir.</p>
-                    {% endif %}
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for consultant in consultant_performance %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if forloop.counter == 1 %}
+                                        <i class="fas fa-trophy text-warning"></i>
+                                    {% elif forloop.counter == 2 %}
+                                        <i class="fas fa-trophy text-secondary"></i>
+                                    {% elif forloop.counter == 3 %}
+                                        <i class="fas fa-trophy" style="color: #cd7f32;"></i>
+                                    {% else %}
+                                        <span class="text-muted">{{ forloop.counter }}º</span>
+                                    {% endif %}
+                                    {{ consultant.username }}
+                                </h5>
+                                <small class="text-muted">Total em Carteira: R$ {{ consultant.total_carteira|br_format }}</small>
+                            </div>
+                            <div class="text-end">
+                                <h6 class="mb-0">Vendido:</h6>
+                                <span class="font-weight-bold">R$ {{ consultant.total_vendido|br_format }}</span>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">Não há dados de desempenho para exibir.</li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
@@ -117,11 +206,7 @@
             <div class="card h-100">
                 <div class="card-header">Previsão de Fechamento por Semana</div>
                 <div class="card-body">
-                    {% if weekly_forecast_labels %}
-                        <canvas id="weeklyForecastChart"></canvas>
-                    {% else %}
-                        <p class="text-center text-muted">Não há dados de previsão para exibir.</p>
-                    {% endif %}
+                    <canvas id="weeklyForecastChart"></canvas>
                 </div>
             </div>
         </div>
@@ -166,12 +251,14 @@
 {% block scripts %}
 {{ block.super }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
-    // Configurações globais do Chart.js para a nova paleta
+    // Configurações globais do Chart.js
     Chart.defaults.font.family = 'Montserrat, sans-serif';
     Chart.defaults.color = 'var(--primary-text)';
+    Chart.register(ChartDataLabels);
 
-    // Gráfico de Status (Pizza)
+    // Gráfico de Status (Doughnut)
     const ctx = document.getElementById('thermometerChart').getContext('2d');
     new Chart(ctx, {
         type: 'doughnut',
@@ -185,11 +272,7 @@
                     'rgba(255, 193, 7, 0.7)', // Yellow
                     'rgba(23, 162, 184, 0.7)'  // Blue
                 ],
-                borderColor: [
-                    '#dc3545',
-                    '#ffc107',
-                    '#17a2b8'
-                ],
+                borderColor: ['#dc3545', '#ffc107', '#17a2b8'],
                 borderWidth: 1
             }]
         },
@@ -197,76 +280,75 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'top',
+                legend: { position: 'top' },
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        let percentage = (value * 100 / sum).toFixed(2) + "%";
+                        return percentage;
+                    },
+                    color: '#fff',
+                    font: { weight: 'bold' }
                 }
             }
         }
     });
 
-    // Gráfico de Desempenho dos Consultores (Barras Horizontais)
-    {% if consultant_labels %}
-    const consultantCtx = document.getElementById('consultantPerformanceChart').getContext('2d');
-    new Chart(consultantCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ consultant_labels|safe }},
-            datasets: [
-                {
-                    label: 'Total em Carteira',
-                    data: {{ consultant_carteira|safe }},
-                    backgroundColor: 'rgba(108, 117, 125, 0.7)', // Medium gray
-                    borderColor: '#6c757d',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Total Vendido',
-                    data: {{ consultant_vendido|safe }},
-                    backgroundColor: 'rgba(40, 167, 69, 0.7)', // Green
-                    borderColor: '#28a745',
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            indexAxis: 'y',
-            scales: {
-                x: {
-                    beginAtZero: true
-                },
-                y: {
-                    ticks: {
-                        padding: 20
-                    }
-                }
-            }
-        }
-    });
-    {% endif %}
-
-    // Gráfico de Previsão Semanal (Barras)
-    {% if weekly_forecast_labels %}
+    // Gráfico de Previsão Semanal (Barras Empilhadas)
     const weeklyCtx = document.getElementById('weeklyForecastChart').getContext('2d');
     new Chart(weeklyCtx, {
         type: 'bar',
         data: {
-            labels: {{ weekly_forecast_labels|safe }},
-            datasets: [{
-                label: 'Valor (R$)',
-                data: {{ weekly_forecast_values|safe }},
-                backgroundColor: 'rgba(52, 58, 64, 0.8)', // Dark gray
-                borderColor: '#343a40',
-                borderWidth: 1
-            }]
+            labels: {{ weekly_labels|safe }},
+            datasets: [
+                {
+                    label: 'Quente',
+                    data: {{ quente_data|safe }},
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)', // Red
+                },
+                {
+                    label: 'Morno',
+                    data: {{ morno_data|safe }},
+                    backgroundColor: 'rgba(255, 193, 7, 0.7)', // Yellow
+                },
+                {
+                    label: 'Frio',
+                    data: {{ frio_data|safe }},
+                    backgroundColor: 'rgba(23, 162, 184, 0.7)', // Blue
+                }
+            ]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
+                x: { stacked: true },
                 y: {
-                    beginAtZero: true
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        }
+                    }
                 }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed.y !== null) {
+                                label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                            }
+                            return label;
+                        }
+                    }
+                },
+                datalabels: { display: false }
             }
         }
     });
-    {% endif %}
 </script>
 {% endblock %}
