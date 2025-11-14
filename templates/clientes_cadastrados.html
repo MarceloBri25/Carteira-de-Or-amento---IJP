@@ -1,51 +1,139 @@
 {% extends 'home.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">Clientes Cadastrados</h2>
+<style>
+    .client-card {
+        transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+    }
+    .client-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .client-card .card-body {
+        padding: 1.5rem;
+    }
+    .client-card .card-title {
+        font-weight: 700;
+    }
+    .client-info p {
+        margin-bottom: 0.5rem;
+        color: #6c757d;
+    }
+    .client-info i {
+        margin-right: 8px;
+        width: 20px;
+        text-align: center;
+    }
+</style>
 
-    <div class="card">
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Clientes Cadastrados</h2>
+        {% if request.user.role == 'gerente' or request.user.role == 'administrador' %}
+            <a href="{% url 'cliente_add' %}" class="btn btn-dark">
+                <i class="fas fa-plus me-2"></i>Adicionar Cliente
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="card mb-4">
         <div class="card-body">
-            <form method="get" class="mb-4">
+            <form method="get">
                 <div class="input-group">
-                    <input type="text" class="form-control" name="q" placeholder="Pesquisar clientes..." value="{{ query }}">
-                    <button class="btn btn-primary" type="submit">
+                    <input type="text" class="form-control" name="q" placeholder="Pesquisar clientes..." value="{{ query|default:'' }}">
+                    <button class="btn btn-dark" type="submit">
                         <i class="fas fa-search"></i>
                     </button>
+                    {% if query %}
+                        <a href="{% url 'clientes_cadastrados' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    {% endif %}
                 </div>
             </form>
-
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Nome Completo</th>
-                        <th>CPF/CNPJ</th>
-                        <th>Telefone</th>
-                        <th>Email</th>
-                        {% if request.user.role == 'gerente' or request.user.role == 'administrador' %}
-                            <th>Ações</th>
-                        {% endif %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cliente in page_obj %}
-                    <tr>
-                        <td>{{ cliente.nome_completo }}</td>
-                        <td>{{ cliente.cpf_cnpj|default_if_none:"" }}</td>
-                        <td>{{ cliente.telefone|default_if_none:"" }}</td>
-                        <td>{{ cliente.email|default_if_none:"" }}</td>
-                        {% if request.user.role == 'gerente' or request.user.role == 'administrador' %}
-                            <td>
-                                <a href="{% url 'cliente_edit' cliente.pk %}" class="btn btn-sm btn-primary">Editar</a>
-                            </td>
-                        {% endif %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-
         </div>
     </div>
+
+    <div class="row">
+        {% for cliente in page_obj %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card client-card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title mb-3">{{ cliente.nome_completo }}</h5>
+                    <div class="client-info flex-grow-1">
+                        <p><i class="fas fa-id-card"></i> {{ cliente.cpf_cnpj|default:"Não informado" }}</p>
+                        <p><i class="fas fa-phone"></i> {{ cliente.telefone|default:"Não informado" }}</p>
+                        <p><i class="fas fa-envelope"></i> {{ cliente.email|default:"Não informado" }}</p>
+                    </div>
+                    {% if request.user.role == 'gerente' or request.user.role == 'administrador' %}
+                        <div class="mt-4">
+                            <a href="{% url 'cliente_edit' cliente.pk %}" class="btn btn-sm btn-outline-dark w-100">Editar</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center" role="alert">
+                    Nenhum cliente encontrado.
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;&laquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                {% endif %}
+
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;&raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
 </div>
 {% endblock %}

@@ -5,8 +5,8 @@ from .views import (
     add_cliente, add_especificador, edit_orcamento, gerente_dashboard,
     gerente_criar_orcamento, meus_clientes_view, todos_orcamentos_view,
     marcar_como_ganho, consultor_orcamentos_fechados_ganhos,
-    reverter_orcamento_ganho, administrador_dashboard, add_jornada_cliente_comment,
-    add_cliente_full, clientes_cadastrados, cliente_edit_view, importar_orcamentos, orcamentos_fechados_view,
+    reverter_orcamento_ganho, administrador_dashboard, administrador_criar_orcamento, add_jornada_cliente_comment,
+    add_cliente_full, clientes_cadastrados, cliente_add_view, cliente_edit_view, importar_orcamentos, orcamentos_fechados_view,
     download_template_view, search_clientes, search_especificadores
 )
 
@@ -22,6 +22,7 @@ urlpatterns = [
     path('dashboard/', consultor_dashboard, name='consultor_dashboard'),
     path('consultor/criar-orcamento/', consultor_criar_orcamento, name='consultor_criar_orcamento'),
     path('administrador/dashboard/', administrador_dashboard, name='administrador_dashboard'),
+    path('administrador/criar-orcamento/', administrador_criar_orcamento, name='administrador_criar_orcamento'),
     path('administrador/importar-orcamentos/', importar_orcamentos, name='importar_orcamentos'),
     path('administrador/importar-orcamentos/download-template/', download_template_view, name='download_template'),
     path('gerente/dashboard/', gerente_dashboard, name='gerente_dashboard'),
@@ -42,6 +43,7 @@ urlpatterns = [
     path('orcamento/<int:pk>/edit/', edit_orcamento, name='edit_orcamento'),
     path('orcamento/<int:pk>/add-jornada-comment/', add_jornada_cliente_comment, name='add_jornada_cliente_comment'),
     path('clientes_cadastrados/', clientes_cadastrados, name='clientes_cadastrados'),
+    path('cliente/add/', cliente_add_view, name='cliente_add'),
     path('cliente/<int:pk>/edit/', cliente_edit_view, name='cliente_edit'),
     path('orcamentos-fechados/', orcamentos_fechados_view, name='orcamentos_fechados'),
 ]

@@ -59,6 +59,15 @@ class OrcamentoForm(forms.ModelForm):
         model = Orcamento
         exclude = ['usuario']
 
+class OrcamentoAdminForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['usuario'].widget.attrs.update({'class': 'form-select'})
+
+    class Meta:
+        model = Orcamento
+        fields = '__all__'
+
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
@@ -421,6 +430,32 @@ def gerente_criar_orcamento(request):
     return render(request, 'gerente_criar_orcamento.html', {'form': form})
 
 @login_required
+def administrador_criar_orcamento(request):
+    if request.method == 'POST':
+        form = OrcamentoAdminForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('administrador_dashboard')
+    else:
+        form = OrcamentoAdminForm()
+
+    especificadores = Especificador.objects.all()
+    clientes = Cliente.objects.all()
+    category_choices = Orcamento.CATEGORY_CHOICES
+    thermometer_choices = Orcamento.THERMOMETER_CHOICES
+    stage_choices = Orcamento.STAGE_CHOICES
+    context = {
+        'form': form,
+        'especificadores': especificadores,
+        'clientes': clientes,
+        'category_choices': category_choices,
+        'thermometer_choices': thermometer_choices,
+        'stage_choices': stage_choices,
+    }
+    return render(request, 'administrador_criar_orcamento.html', context)
+
+
+@login_required
 def meus_clientes_view(request):
     user = request.user
     if user.role == 'consultor':
@@ -442,7 +477,7 @@ def meus_clientes_view(request):
     selected_especificador = request.GET.get('especificador')
     selected_cliente = request.GET.get('cliente')
     selected_etapa = request.GET.get('etapa')
-    selected_termometro = request.GET.get('termometro')
+    selected_termometro = request.GET.getlist('termometro')
 
     # Apply filters
     if selected_year:
@@ -456,7 +491,7 @@ def meus_clientes_view(request):
     if selected_etapa:
         orcamentos = orcamentos.filter(etapa=selected_etapa)
     if selected_termometro:
-        orcamentos = orcamentos.filter(termometro=selected_termometro)
+        orcamentos = orcamentos.filter(termometro__in=selected_termometro)
 
     # Get filter options
     available_years = base_orcamentos_for_filters.dates('data_previsao_fechamento', 'year', order='DESC')
@@ -492,6 +527,7 @@ def meus_clientes_view(request):
         'all_clientes': all_clientes,
         'stage_choices': stage_choices,
         'thermometer_choices': thermometer_choices,
+        'selected_termometro': selected_termometro,
     }
     return render(request, 'meus_clientes.html', context)
 
@@ -646,8 +682,16 @@ def administrador_dashboard(request):
     if selected_lojas:
         orcamentos_mes = orcamentos_mes.filter(usuario__loja__nome__in=selected_lojas)
 
-    total_perdido_mes_quantidade = Orcamento.objects.filter(etapa='Perdida').count()
-    total_perdido_mes_valor = Orcamento.objects.filter(etapa='Perdida').aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+    orcamentos_perdidos = Orcamento.objects.filter(etapa='Perdida')
+    if selected_year:
+        orcamentos_perdidos = orcamentos_perdidos.filter(data_previsao_fechamento__year=selected_year)
+    if selected_month:
+        orcamentos_perdidos = orcamentos_perdidos.filter(data_previsao_fechamento__month=selected_month)
+    if selected_lojas:
+        orcamentos_perdidos = orcamentos_perdidos.filter(usuario__loja__nome__in=selected_lojas)
+
+    total_perdido_mes_quantidade = orcamentos_perdidos.count()
+    total_perdido_mes_valor = orcamentos_perdidos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
 
     total_novos_orcamentos_mes_quantidade = orcamentos_mes.count()
     total_novos_orcamentos_mes_valor = orcamentos_mes.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
@@ -727,7 +771,7 @@ def administrador_dashboard(request):
 
     especificadores_ranking = Especificador.objects.annotate(
         total_comprado=Sum('orcamento__valor_orcamento', filter=especificadores_filter)
-    ).order_by('-total_comprado')[:10]
+    ).order_by('-total_comprado')
 
     # Filter options
     available_years = Orcamento.objects.dates('data_previsao_fechamento', 'year', order='DESC')
@@ -802,15 +846,32 @@ def add_cliente_full(request):
             return JsonResponse({'error': 'Formulário inválido', 'errors': form.errors}, status=400)
     return render(request, 'add_cliente_full.html', {'form': ClienteFullForm()})
 
+from django.core.paginator import Paginator
+
 @login_required
 def clientes_cadastrados(request):
     query = request.GET.get('q')
     if query:
-        clientes = Cliente.objects.filter(nome_completo__icontains=query)
+        clientes_list = Cliente.objects.filter(nome_completo__icontains=query).order_by('nome_completo')
     else:
-        clientes = Cliente.objects.all()
+        clientes_list = Cliente.objects.all().order_by('nome_completo')
 
-    return render(request, 'clientes_cadastrados.html', {'page_obj': clientes, 'query': query})
+    paginator = Paginator(clientes_list, 12) # 12 clients per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'clientes_cadastrados.html', {'page_obj': page_obj, 'query': query})
+
+@login_required
+def cliente_add_view(request):
+    if request.method == 'POST':
+        form = ClienteFullForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('clientes_cadastrados')
+    else:
+        form = ClienteFullForm()
+    return render(request, 'cliente_edit.html', {'form': form})
 
 @login_required
 def cliente_edit_view(request, pk):

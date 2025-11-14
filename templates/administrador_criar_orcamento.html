@@ -1,0 +1,404 @@
+{% extends "home.html" %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Criar Novo Orçamento (Admin)</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'administrador_criar_orcamento' %}">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="id_usuario" class="form-label">Usuário</label>
+                                {{ form.usuario }}
+                                {% for error in form.usuario.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="data_solicitacao" class="form-label">Data de Solicitação</label>
+                                <input type="date" class="form-control {% if form.data_solicitacao.errors %}is-invalid{% endif %}" id="data_solicitacao" name="data_solicitacao" value="{{ form.data_solicitacao.value|default_if_none:'' }}" required>
+                                {% for error in form.data_solicitacao.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="especificador" class="form-label">Especificador (Arquiteto)</label>
+                                <div class="input-group">
+                                    <select id="especificador" name="especificador" class="{% if form.especificador.errors %}is-invalid{% endif %}" required>
+                                        {% for especificador in especificadores %}
+                                            <option value="{{ especificador.id }}" {% if form.especificador.value == especificador.id %}selected{% endif %}>{{ especificador.nome_completo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" id="add-especificador-btn">+</button>
+                                </div>
+                                {% for error in form.especificador.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                <div id="add-especificador-form" class="input-group mt-2" style="display: none;">
+                                    <input type="text" class="form-control" placeholder="Novo especificador">
+                                    <button class="btn btn-dark" type="button">Salvar</button>
+                                    <button class="btn btn-secondary" type="button">Cancelar</button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="categoria" class="form-label">Categoria</label>
+                                <select class="form-select {% if form.categoria.errors %}is-invalid{% endif %}" id="categoria" name="categoria" required>
+                                    {% for value, name in category_choices %}
+                                        <option value="{{ value }}" {% if form.categoria.value == value %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.categoria.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nome_cliente" class="form-label">Nome do Cliente</label>
+                                <div class="input-group">
+                                    <select id="nome_cliente" name="nome_cliente" class="{% if form.nome_cliente.errors %}is-invalid{% endif %}" required>
+                                        {% for cliente in clientes %}
+                                            <option value="{{ cliente.id }}" {% if form.nome_cliente.value == cliente.id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#addClienteModal" id="add-cliente-btn">+</button>
+                                </div>
+                                {% for error in form.nome_cliente.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="numero_orcamento" class="form-label">Número do Orçamento</label>
+                                <input type="text" class="form-control {% if form.numero_orcamento.errors %}is-invalid{% endif %}" id="numero_orcamento" name="numero_orcamento" value="{{ form.numero_orcamento.value|default_if_none:'' }}" required>
+                                {% for error in form.numero_orcamento.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="data_envio" class="form-label">Data do Envio do Orçamento</label>
+                                <input type="date" class="form-control {% if form.data_envio.errors %}is-invalid{% endif %}" id="data_envio" name="data_envio" value="{{ form.data_envio.value|default_if_none:'' }}">
+                                {% for error in form.data_envio.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="valor_orcamento_display" class="form-label">Valor do Orçamento (R$)</label>
+                                <input type="text" class="form-control {% if form.valor_orcamento.errors %}is-invalid{% endif %}" id="valor_orcamento_display" name="valor_orcamento_display" value="{{ form.valor_orcamento.value|default_if_none:'' }}" required>
+                                <input type="hidden" id="valor_orcamento" name="valor_orcamento" value="{{ form.valor_orcamento.value|default_if_none:'' }}">
+                                {% for error in form.valor_orcamento.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="termometro" class="form-label">Termômetro</label>
+                                <select class="form-select {% if form.termometro.errors %}is-invalid{% endif %}" id="termometro" name="termometro" required>
+                                    {% for value, name in thermometer_choices %}
+                                        <option value="{{ value }}" {% if form.termometro.value == value %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.termometro.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="data_previsao_fechamento" class="form-label">Previsão de Fechamento</label>
+                                <input type="date" class="form-control {% if form.data_previsao_fechamento.errors %}is-invalid{% endif %}" id="data_previsao_fechamento" name="data_previsao_fechamento" value="{{ form.data_previsao_fechamento.value|default_if_none:'' }}">
+                                {% for error in form.data_previsao_fechamento.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="semana_previsao_fechamento" class="form-label">Semana da Previsão</label>
+                                <select class="form-select {% if form.semana_previsao_fechamento.errors %}is-invalid{% endif %}" id="semana_previsao_fechamento" name="semana_previsao_fechamento">
+                                    <option value="Semana 1" {% if form.semana_previsao_fechamento.value == "Semana 1" %}selected{% endif %}>Semana 1</option>
+                                    <option value="Semana 2" {% if form.semana_previsao_fechamento.value == "Semana 2" %}selected{% endif %}>Semana 2</option>
+                                    <option value="Semana 3" {% if form.semana_previsao_fechamento.value == "Semana 3" %}selected{% endif %}>Semana 3</option>
+                                    <option value="Semana 4" {% if form.semana_previsao_fechamento.value == "Semana 4" %}selected{% endif %}>Semana 4</option>
+                                    <option value="Semana 5" {% if form.semana_previsao_fechamento.value == "Semana 5" %}selected{% endif %}>Semana 5</option>
+                                </select>
+                                {% for error in form.semana_previsao_fechamento.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="etapa" class="form-label">Etapa</label>
+                                <select class="form-select {% if form.etapa.errors %}is-invalid{% endif %}" id="etapa" name="etapa" required>
+                                    {% for value, name in stage_choices %}
+                                        <option value="{{ value }}" {% if form.etapa.value == value %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.etapa.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="data_fechada_ganha" class="form-label">Data Fechada e Ganha</label>
+                                <input type="date" class="form-control {% if form.data_fechada_ganha.errors %}is-invalid{% endif %}" id="data_fechada_ganha" name="data_fechada_ganha" value="{{ form.data_fechada_ganha.value|default_if_none:'' }}">
+                                {% for error in form.data_fechada_ganha.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="jornada_cliente" class="form-label">Jornada do Cliente (Observações)</label>
+                            <textarea class="form-control {% if form.jornada_cliente.errors %}is-invalid{% endif %}" id="jornada_cliente" name="jornada_cliente" rows="3">{{ form.jornada_cliente.value|default_if_none:'' }}</textarea>
+                            {% for error in form.jornada_cliente.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="card-footer text-end">
+                            <a href="{% url 'administrador_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Salvar Orçamento</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Adicionar Cliente -->
+<div class="modal fade" id="addClienteModal" tabindex="-1" aria-labelledby="addClienteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addClienteModalLabel">Adicionar Novo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-cliente-full-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_nome_completo_cliente" class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="id_nome_completo_cliente" name="nome_completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_cpf_cnpj_cliente" class="form-label">CPF/CNPJ</label>
+                        <input type="text" class="form-control" id="id_cpf_cnpj_cliente" name="cpf_cnpj">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_telefone_cliente" class="form-label">Número do Celular</label>
+                        <input type="text" class="form-control" id="id_telefone_cliente" name="telefone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_email_cliente" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="id_email_cliente" name="email">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-dark">Salvar Cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Erro de Duplicidade -->
+<div class="modal fade" id="duplicateErrorModal" tabindex="-1" aria-labelledby="duplicateErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="duplicateErrorModalLabel">Erro de Duplicidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Já existe um orçamento com o número "{{ duplicate_numero }}".
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Erro CPF/CNPJ -->
+<div class="modal fade" id="cpfCnpjErrorModal" tabindex="-1" aria-labelledby="cpfCnpjErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cpfCnpjErrorModalLabel">Erro de Duplicidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                O CPF/CNPJ informado já está cadastrado no sistema.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    // Script para Tom-Select
+    var especificadorSelect = new TomSelect('#especificador', { create: false });
+    var clienteSelect = new TomSelect('#nome_cliente', { create: false });
+
+    function setupInlineCreate(select, form, addButton, url) {
+        const tomSelectInstance = select.tomselect;
+        const input = form.querySelector('input');
+        const saveButton = form.querySelector('.btn-dark');
+        const cancelButton = form.querySelector('.btn-secondary');
+
+        addButton.addEventListener('click', () => {
+            tomSelectInstance.wrapper.style.display = 'none';
+            form.style.display = 'flex';
+            input.focus();
+        });
+
+        cancelButton.addEventListener('click', () => {
+            form.style.display = 'none';
+            tomSelectInstance.wrapper.style.display = 'block';
+            input.value = '';
+        });
+
+        saveButton.addEventListener('click', () => {
+            const nome_completo = input.value;
+            if (nome_completo.length < 3) return;
+
+            const formData = new FormData();
+            formData.append('nome_completo', nome_completo);
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.id) {
+                    tomSelectInstance.addOption({ value: data.id, text: data.nome_completo });
+                    tomSelectInstance.setValue(data.id);
+                    cancelButton.click();
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocorreu um erro ao adicionar o especificador.');
+            });
+        });
+    }
+
+    setupInlineCreate(
+        document.getElementById('especificador'),
+        document.getElementById('add-especificador-form'),
+        document.getElementById('add-especificador-btn'),
+        '{% url "add_especificador" %}'
+    );
+
+    // Script para o modal de adicionar cliente
+    const addClienteModalElement = document.getElementById('addClienteModal');
+    const addClienteModal = new bootstrap.Modal(addClienteModalElement);
+    const addClienteFullForm = document.getElementById('add-cliente-full-form');
+    const cpfCnpjErrorModal = new bootstrap.Modal(document.getElementById('cpfCnpjErrorModal'));
+
+    addClienteFullForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        fetch('{% url "add_cliente_full" %}', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200) {
+                const clienteSelect = document.getElementById('nome_cliente').tomselect;
+                clienteSelect.addOption({ value: body.id, text: body.nome_completo });
+                clienteSelect.setValue(body.id);
+                addClienteModal.hide();
+                addClienteFullForm.reset(); // Clear the form
+            } else if (body.errors) {
+                let error_message = '';
+                for (const field in body.errors) {
+                    error_message += `${field}: ${body.errors[field].join(', ')}
+`;
+                }
+                alert(error_message);
+            } else if (body.error) {
+                if (body.error === 'CPF/CNPJ já cadastrado.') {
+                    cpfCnpjErrorModal.show();
+                } else {
+                    alert(body.error);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ocorreu um erro ao adicionar o cliente.');
+        });
+    });
+
+    const valorOrcamentoDisplayInput = document.getElementById('valor_orcamento_display');
+    const valorOrcamentoInput = document.getElementById('valor_orcamento');
+    if (valorOrcamentoDisplayInput) {
+        valorOrcamentoDisplayInput.addEventListener('input', function(event) {
+            let value = event.target.value;
+            // Keep only digits
+            value = value.replace(/\D/g, '');
+
+            if (value === '') {
+                valorOrcamentoInput.value = '';
+                return;
+            }
+
+            // Convert to a number
+            const numericValue = parseFloat(value) / 100;
+            valorOrcamentoInput.value = numericValue.toFixed(2);
+
+            // Format to Brazilian currency style, without the currency symbol
+            const formattedValue = new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(numericValue);
+
+            event.target.value = formattedValue;
+        });
+    }
+
+    {% if duplicate_error %}
+    document.addEventListener('DOMContentLoaded', function() {
+        var myModal = new bootstrap.Modal(document.getElementById('duplicateErrorModal'), {});
+        myModal.show();
+    });
+    {% endif %}
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dataPrevisaoInput = document.getElementById('data_previsao_fechamento');
+        const semanaPrevisaoSelect = document.getElementById('semana_previsao_fechamento');
+
+        if (dataPrevisaoInput && semanaPrevisaoSelect) {
+            dataPrevisaoInput.addEventListener('change', function() {
+                const date = new Date(this.value);
+                const day = date.getUTCDate();
+                const week = Math.ceil(day / 7);
+                semanaPrevisaoSelect.value = 'Semana ' + week;
+            });
+        }
+    });
+</script>
+{% endblock %}
