@@ -1,3 +1,4 @@
+
 {% extends "home.html" %}
 
 {% block content %}
@@ -25,6 +26,7 @@
                 <label for="especificador" class="form-label">Especificador (Arquiteto)</label>
                 <div class="input-group">
                     <select id="especificador" name="especificador" required>
+                        <option value="" selected>Selecione...</option>
                         {% for especificador in all_especificadores %}
                             <option value="{{ especificador.id }}">{{ especificador.nome_completo }}</option>
                         {% endfor %}
@@ -45,6 +47,7 @@
                 <label for="nome_cliente" class="form-label">Nome do Cliente</label>
                 <div class="input-group">
                     <select id="nome_cliente" name="nome_cliente" required>
+                        <option value="" selected>Selecione...</option>
                         {% for cliente in all_clientes %}
                             <option value="{{ cliente.id }}">{{ cliente.nome_completo }}</option>
                         {% endfor %}
@@ -185,7 +188,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -234,6 +239,18 @@ document.addEventListener('DOMContentLoaded', function() {
     var myModal = new bootstrap.Modal(document.getElementById('duplicateErrorModal'), {});
     myModal.show();
     {% endif %}
+
+    const dataPrevisaoInput = document.getElementById('data_previsao_fechamento');
+    const semanaPrevisaoSelect = document.getElementById('semana_previsao_fechamento');
+
+    if (dataPrevisaoInput && semanaPrevisaoSelect) {
+        dataPrevisaoInput.addEventListener('change', function() {
+            const date = new Date(this.value);
+            const day = date.getUTCDate();
+            const week = Math.ceil(day / 7);
+            semanaPrevisaoSelect.value = 'Semana ' + week;
+        });
+    }
 });
 </script>
 {% endblock %}

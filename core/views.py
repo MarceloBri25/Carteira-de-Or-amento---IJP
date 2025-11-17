@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView
-from .models import Orcamento, Loja, User, Cliente, Especificador, JornadaClienteHistorico
+from .models import Orcamento, Loja, User, Cliente, Especificador, JornadaClienteHistorico, Notification
 from django.shortcuts import get_object_or_404
 from django import forms
 from .models import User, Orcamento, Cliente, Especificador, JornadaClienteHistorico
@@ -550,7 +550,7 @@ def meus_clientes_view(request):
                 'data': historico.data_edicao,
                 'comentario': historico.comentario,
             })
-        orcamento.jornada_completa = sorted(jornada_completa, key=lambda x: x['data'], reverse=True)
+        orcamento.jornada_completa = sorted(jornada_completa, key=lambda x: x['data'], reverse=False)
 
     context = {
         'orcamentos': orcamentos_list,
@@ -918,6 +918,53 @@ def cliente_edit_view(request, pk):
     return render(request, 'cliente_edit.html', {'form': form})
 
 @login_required
+def especificadores_cadastrados(request):
+    query = request.GET.get('q')
+    if query:
+        especificadores_list = Especificador.objects.filter(nome_completo__icontains=query).order_by('nome_completo')
+    else:
+        especificadores_list = Especificador.objects.all().order_by('nome_completo')
+
+    paginator = Paginator(especificadores_list, 12) # 12 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'especificadores_cadastrados.html', {'page_obj': page_obj, 'query': query})
+
+@login_required
+def especificador_add_view(request):
+    if request.user.role not in ['administrador', 'gerente']:
+        messages.error(request, 'Você não tem permissão para adicionar especificadores.')
+        return redirect('especificadores_cadastrados')
+    
+    if request.method == 'POST':
+        form = EspecificadorForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Especificador adicionado com sucesso.')
+            return redirect('especificadores_cadastrados')
+    else:
+        form = EspecificadorForm()
+    return render(request, 'especificador_edit.html', {'form': form})
+
+@login_required
+def especificador_edit_view(request, pk):
+    if request.user.role not in ['administrador', 'gerente']:
+        messages.error(request, 'Você não tem permissão para editar especificadores.')
+        return redirect('especificadores_cadastrados')
+
+    especificador = get_object_or_404(Especificador, pk=pk)
+    if request.method == 'POST':
+        form = EspecificadorForm(request.POST, instance=especificador)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Especificador atualizado com sucesso.')
+            return redirect('especificadores_cadastrados')
+    else:
+        form = EspecificadorForm(instance=especificador)
+    return render(request, 'especificador_edit.html', {'form': form})
+
+@login_required
 def download_template_view(request):
     if request.user.role != 'administrador':
         return redirect('home')
@@ -1080,3 +1127,10 @@ def search_especificadores(request):
     especificadores = Especificador.objects.filter(nome_completo__icontains=query)[:10]
     results = [{'id': esp.id, 'text': esp.nome_completo} for esp in especificadores]
     return JsonResponse({'results': results})
+
+@login_required
+def notifications_view(request):
+    notifications = Notification.objects.filter(recipient=request.user)
+    # Mark notifications as read when the user views them
+    notifications.update(is_read=True)
+    return render(request, 'notifications.html', {'notifications': notifications})

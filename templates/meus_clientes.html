@@ -7,50 +7,150 @@
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>
-.client-card {
+.budget-container {
     background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 24px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
     overflow: hidden;
     transition: box-shadow .3s ease;
+    border: 1px solid #dee2e6;
 }
-.client-card:hover {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+.budget-container:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
-.client-card-header {
-    background-color: #f5f5f5;
-    padding: 20px;
-    border-bottom: 1px solid #eee;
+
+.client-info-section {
+    padding: 1.5rem;
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
-.client-card-header h5 {
+.client-info-header h5 {
+    margin: 0;
+    font-weight: 700;
+    color: #343a40;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f1f1f1;
+}
+.client-info-body {
+    padding: 1.5rem 0;
+    flex-grow: 1;
+}
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.info-icon {
+    color: #0d6efd;
+    font-size: 1.2rem;
+    width: 30px;
+    text-align: center;
+    margin-right: 1rem;
+}
+.info-value {
+    color: #495057;
+}
+
+.client-info-footer {
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    margin-top: 1.5rem;
+}
+.client-info-footer.closed-won-footer {
+    background-color: #28a745; /* Green color for success */
+    color: white;
+}
+
+/* Chat Styles */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.chat-header {
+    background-color: #f7f7f7;
+    color: #343a40;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+.chat-header h5 {
     margin: 0;
     font-weight: 700;
 }
-.client-card-body {
-    padding: 20px;
-}
-.client-card-footer {
-    background-color: #f5f5f5;
-    padding: 10px 20px;
-    text-align: right;
-    font-weight: 700;
-}
-.jornada-cliente-container {
-    padding: 20px;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-}
-.chat-history {
-    max-height: 300px; /* Adjust as needed */
+.chat-body {
+    padding: 1rem;
     overflow-y: auto;
-    border: 1px solid #e9ecef;
-    padding: 10px;
-    border-radius: 5px;
+    flex-grow: 1;
     background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
 }
-.chat-history p {
+.chat-message {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+.chat-message .message-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    max-width: 85%;
     word-wrap: break-word;
+    line-height: 1.4;
+}
+.chat-message .message-meta {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+.chat-message .message-meta .message-author {
+    font-weight: bold;
+    color: #343a40;
+    font-size: 0.85rem;
+}
+
+/* Current user's messages */
+.chat-message.me {
+    align-items: flex-end;
+}
+.chat-message.me .message-bubble {
+    background-color: #0d6efd;
+    color: white;
+    border-bottom-right-radius: 0.5rem;
+}
+.chat-message.me .message-meta {
+    align-self: flex-end;
+}
+
+/* Other users' messages */
+.chat-message.other {
+    align-items: flex-start;
+}
+.chat-message.other .message-bubble {
+    background-color: #e9ecef;
+    color: #212529;
+    border-bottom-left-radius: 0.5rem;
+}
+.chat-message.other .message-meta {
+    align-self: flex-start;
+}
+
+.chat-footer {
+    padding: 1rem 1.5rem;
+    background-color: #fff;
+    border-top: 1px solid #dee2e6;
 }
 </style>
 
@@ -137,55 +237,87 @@
     </div>
 
     {% for orcamento in orcamentos %}
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="client-card">
-                <div class="client-card-header">
-                    <h5>{{ orcamento.nome_cliente.nome_completo }}</h5>
-                </div>
-                <div class="client-card-body">
-                    <p><strong>Especificador:</strong> {{ orcamento.especificador.nome_completo|default:"N/A" }}</p>
-                    <p><strong>Valor do Orçamento:</strong> R$ {{ orcamento.valor_orcamento|br_format }}</p>
-                    <p><strong>Consultor:</strong> {{ orcamento.usuario.get_full_name|default:orcamento.usuario.username }}</p>
-                    <p><strong>Data de Solicitação:</strong> {{ orcamento.data_solicitacao|date:"d/m/Y" }}</p>
-                    {% if orcamento.data_fechada_ganha %}
-                        <p><strong>Data Fechada e Ganha:</strong> {{ orcamento.data_fechada_ganha|date:"d/m/Y" }}</p>
-                    {% else %}
-                        <p><strong>Data Fechada e Ganha:</strong> Em aberto</p>
-                    {% endif %}
-                </div>
-                <div class="client-card-footer">
-                    {% if orcamento.dias_para_fechar is not None %}
-                        <strong>{{ orcamento.dias_para_fechar }} dias para fechar</strong>
-                    {% elif orcamento.dias_em_aberto is not None %}
-                        <strong>Em aberto por {{ orcamento.dias_em_aberto }} dias</strong>
-                    {% else %}
-                        <span>-</span>
-                    {% endif %}
+    <div class="budget-container" id="orcamento-{{ orcamento.pk }}">
+        <div class="row g-0">
+            <div class="col-md-5">
+                <div class="client-info-section">
+                    <div class="client-info-header">
+                        <h5>{{ orcamento.nome_cliente.nome_completo }}</h5>
+                    </div>
+                    <div class="client-info-body">
+                        <ul class="info-list">
+                            <li class="info-item">
+                                <i class="fas fa-user info-icon"></i>
+                                <span class="info-value"><strong>Especificador:</strong> {{ orcamento.especificador.nome_completo|default:"N/A" }}</span>
+                            </li>
+                            <li class="info-item">
+                                <i class="fas fa-dollar-sign info-icon"></i>
+                                <span class="info-value"><strong>Valor:</strong> R$ {{ orcamento.valor_orcamento|br_format }}</span>
+                            </li>
+                            <li class="info-item">
+                                <i class="fas fa-user-tie info-icon"></i>
+                                <span class="info-value"><strong>Consultor:</strong> {{ orcamento.usuario.get_full_name|default:orcamento.usuario.username }}</span>
+                            </li>
+                            <li class="info-item">
+                                <i class="fas fa-calendar-alt info-icon"></i>
+                                <span class="info-value"><strong>Solicitação:</strong> {{ orcamento.data_solicitacao|date:"d/m/Y" }}</span>
+                            </li>
+                            <li class="info-item">
+                                <i class="fas fa-check-circle info-icon"></i>
+                                <span class="info-value"><strong>Fechado em:</strong> 
+                                    {% if orcamento.data_fechada_ganha %}
+                                        {{ orcamento.data_fechada_ganha|date:"d/m/Y" }}
+                                    {% else %}
+                                        Em aberto
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="client-info-footer {% if orcamento.etapa == 'Fechada e Ganha' %}closed-won-footer{% endif %}">
+                        {% if orcamento.etapa == 'Fechada e Ganha' %}
+                            <i class="fas fa-trophy"></i> Venda fechada em {{ orcamento.dias_para_fechar }} dias
+                        {% elif orcamento.dias_para_fechar is not None %}
+                            <i class="fas fa-hourglass-end"></i> {{ orcamento.dias_para_fechar }} dias para fechar
+                        {% elif orcamento.dias_em_aberto is not None %}
+                            <i class="fas fa-hourglass-start"></i> Em aberto por {{ orcamento.dias_em_aberto }} dias
+                        {% else %}
+                            <span>-</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-6">
-            <div class="jornada-cliente-container h-100 d-flex flex-column">
-                <h5>Jornada do Cliente</h5>
-                <div class="chat-history flex-grow-1 overflow-auto p-3 mb-3 bg-light rounded">
-                    {% for item in orcamento.jornada_completa %}
-                        <div class="mb-2">
-                            <strong>{{ item.usuario.username }}</strong> em {{ item.data|date:"d/m/Y" }}:
-                            <p class="mb-0">{{ item.comentario }}</p>
-                        </div>
-                    {% endfor %}
-                    {% if not orcamento.jornada_completa %}
-                        <p>Nenhum histórico de jornada do cliente.</p>
-                    {% endif %}
-                </div>
-                <form method="post" action="{% url 'add_jornada_cliente_comment' orcamento.pk %}" class="mt-auto">
-                    {% csrf_token %}
-                    <div class="input-group">
-                        <textarea name="comentario" class="form-control" placeholder="Adicionar comentário..." rows="2" required></textarea>
-                        <button type="submit" class="btn btn-primary">Enviar</button>
+            <div class="col-md-7">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <h5 class="mb-0">Jornada do Cliente</h5>
                     </div>
-                </form>
+                    <div class="chat-body">
+                        {% for item in orcamento.jornada_completa %}
+                            <div class="chat-message {% if item.usuario == request.user %}me{% else %}other{% endif %}">
+                                <div class="message-bubble">
+                                    {{ item.comentario }}
+                                </div>
+                                <div class="message-meta">
+                                    <span class="message-author">{{ item.usuario.username }}</span> | <span>{{ item.data|date:"d/m/Y H:i" }}</span>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center text-muted p-5">Nenhum comentário na jornada ainda.</div>
+                        {% endfor %}
+                    </div>
+                    <div class="chat-footer">
+                        <form method="post" action="{% url 'add_jornada_cliente_comment' orcamento.pk %}">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                <textarea name="comentario" class="form-control" placeholder="Adicionar um novo comentário..." rows="2" required></textarea>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Enviar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

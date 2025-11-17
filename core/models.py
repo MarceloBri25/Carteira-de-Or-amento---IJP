@@ -70,6 +70,7 @@ class Orcamento(models.Model):
     etapa = models.CharField(max_length=50, choices=STAGE_CHOICES, default='Especificação')
     jornada_cliente = models.TextField(blank=True, null=True)
     data_fechada_ganha = models.DateField(blank=True, null=True)
+    subscribers = models.ManyToManyField(User, related_name='subscribed_orcamentos', blank=True)
 
     def __str__(self):
         return f'{self.nome_cliente} - {self.numero_orcamento}'
@@ -102,3 +103,15 @@ class JornadaClienteHistorico(models.Model):
 
     def __str__(self):
         return f'Comentário de {self.usuario.username if self.usuario else "Usuário Desconhecido"} em {self.data_edicao.strftime("%d/%m/%Y %H:%M")}'
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    comment = models.ForeignKey(JornadaClienteHistorico, on_delete=models.CASCADE)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Notificação para {self.recipient.username} sobre o comentário {self.comment.id}'

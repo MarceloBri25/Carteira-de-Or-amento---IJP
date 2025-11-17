@@ -7,10 +7,12 @@ from .views import (
     marcar_como_ganho, consultor_orcamentos_fechados_ganhos,
     reverter_orcamento_ganho, administrador_dashboard, administrador_criar_orcamento, add_jornada_cliente_comment,
     add_cliente_full, clientes_cadastrados, cliente_add_view, cliente_edit_view, importar_orcamentos, orcamentos_fechados_view,
-    download_template_view, search_clientes, search_especificadores
+    download_template_view, search_clientes, search_especificadores, notifications_view,
+    especificadores_cadastrados, especificador_add_view, especificador_edit_view
 )
 
 urlpatterns = [
+    path('notifications/', notifications_view, name='notifications'),
     path('register/', register_user_view, name='register'),
     path('home/', home_view, name='home'),
     path('lojas/', LojasView.as_view(), name='lojas'),
@@ -45,5 +47,8 @@ urlpatterns = [
     path('clientes_cadastrados/', clientes_cadastrados, name='clientes_cadastrados'),
     path('cliente/add/', cliente_add_view, name='cliente_add'),
     path('cliente/<int:pk>/edit/', cliente_edit_view, name='cliente_edit'),
+    path('especificadores_cadastrados/', especificadores_cadastrados, name='especificadores_cadastrados'),
+    path('especificador/add/', especificador_add_view, name='especificador_add'),
+    path('especificador/<int:pk>/edit/', especificador_edit_view, name='especificador_edit'),
     path('orcamentos-fechados/', orcamentos_fechados_view, name='orcamentos_fechados'),
 ]

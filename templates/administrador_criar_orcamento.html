@@ -35,6 +35,7 @@
                                 <label for="especificador" class="form-label">Especificador (Arquiteto)</label>
                                 <div class="input-group">
                                     <select id="especificador" name="especificador" class="{% if form.especificador.errors %}is-invalid{% endif %}" required>
+                                        <option value="" {% if not form.especificador.value %}selected{% endif %}>Selecione um especificador</option>
                                         {% for especificador in especificadores %}
                                             <option value="{{ especificador.id }}" {% if form.especificador.value == especificador.id %}selected{% endif %}>{{ especificador.nome_completo }}</option>
                                         {% endfor %}
@@ -67,6 +68,7 @@
                                 <label for="nome_cliente" class="form-label">Nome do Cliente</label>
                                 <div class="input-group">
                                     <select id="nome_cliente" name="nome_cliente" class="{% if form.nome_cliente.errors %}is-invalid{% endif %}" required>
+                                        <option value="" {% if not form.nome_cliente.value %}selected{% endif %}>Selecione um cliente</option>
                                         {% for cliente in clientes %}
                                             <option value="{{ cliente.id }}" {% if form.nome_cliente.value == cliente.id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
                                         {% endfor %}
@@ -250,6 +252,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     // Script para Tom-Select
     var especificadorSelect = new TomSelect('#especificador', { create: false });
     var clienteSelect = new TomSelect('#nome_cliente', { create: false });
@@ -380,25 +383,21 @@
     }
 
     {% if duplicate_error %}
-    document.addEventListener('DOMContentLoaded', function() {
-        var myModal = new bootstrap.Modal(document.getElementById('duplicateErrorModal'), {});
-        myModal.show();
-    });
+    var myModal = new bootstrap.Modal(document.getElementById('duplicateErrorModal'), {});
+    myModal.show();
     {% endif %}
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dataPrevisaoInput = document.getElementById('data_previsao_fechamento');
-        const semanaPrevisaoSelect = document.getElementById('semana_previsao_fechamento');
 
-        if (dataPrevisaoInput && semanaPrevisaoSelect) {
-            dataPrevisaoInput.addEventListener('change', function() {
-                const date = new Date(this.value);
-                const day = date.getUTCDate();
-                const week = Math.ceil(day / 7);
-                semanaPrevisaoSelect.value = 'Semana ' + week;
-            });
-        }
-    });
+    const dataPrevisaoInput = document.getElementById('data_previsao_fechamento');
+    const semanaPrevisaoSelect = document.getElementById('semana_previsao_fechamento');
+
+    if (dataPrevisaoInput && semanaPrevisaoSelect) {
+        dataPrevisaoInput.addEventListener('change', function() {
+            const date = new Date(this.value);
+            const day = date.getUTCDate();
+            const week = Math.ceil(day / 7);
+            semanaPrevisaoSelect.value = 'Semana ' + week;
+        });
+    }
+});
 </script>
 {% endblock %}

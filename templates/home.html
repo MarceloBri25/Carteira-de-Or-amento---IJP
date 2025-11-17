@@ -162,6 +162,12 @@
             left: auto;
         }
 
+        .notification-bell .badge {
+            position: absolute;
+            top: -5px;
+            right: -10px;
+        }
+
     </style>
 </head>
 <body>
@@ -198,6 +204,7 @@
                                     <li><a class="dropdown-item" href="{% url 'register' %}">Cadastrar novos usuários</a></li>
                                     <li><a class="dropdown-item" href="{% url 'user_list' %}">Gerenciar Usuários</a></li>
                                     <li><a class="dropdown-item" href="{% url 'clientes_cadastrados' %}">Clientes Cadastrados</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'especificadores_cadastrados' %}">Especificadores Cadastrados</a></li>
                                     <li><a class="dropdown-item" href="{% url 'importar_orcamentos' %}">Importar Orçamentos</a></li>
                                 </ul>
                             </li>
@@ -215,6 +222,7 @@
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                                     <li><a class="dropdown-item" href="{% url 'clientes_cadastrados' %}">Clientes Cadastrados</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'especificadores_cadastrados' %}">Especificadores Cadastrados</a></li>
                                 </ul>
                             </li>
                         {% endif %}
@@ -237,9 +245,18 @@
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                                     <li><a class="dropdown-item" href="{% url 'clientes_cadastrados' %}">Clientes Cadastrados</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'especificadores_cadastrados' %}">Especificadores Cadastrados</a></li>
                                 </ul>
                             </li>
                         {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link position-relative notification-bell" href="{% url 'notifications' %}">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_notifications_count > 0 %}
+                                    <span class="badge bg-danger rounded-pill">{{ unread_notifications_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">Sair</a>
                         </li>

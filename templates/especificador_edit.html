@@ -1,6 +1,6 @@
 {% extends 'home.html' %}
 
-{% block title %}Carteira IJP - Editar Cliente{% endblock %}
+{% block title %}Carteira IJP - {% if form.instance.pk %}Editar{% else %}Adicionar{% endif %} Especificador{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -8,7 +8,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="text-center">{% if form.instance.pk %}Editar Cliente{% else %}Adicionar Cliente{% endif %}</h3>
+                    <h3 class="text-center">{% if form.instance.pk %}Editar Especificador{% else %}Adicionar Especificador{% endif %}</h3>
                 </div>
                 <div class="card-body">
                     <form method="post">

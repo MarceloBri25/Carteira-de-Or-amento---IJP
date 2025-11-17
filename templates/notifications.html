@@ -1,0 +1,30 @@
+{% extends "home.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Notificações</h2>
+    <div class="list-group">
+        {% for notification in notifications %}
+            {% if request.user.role == 'administrador' %}
+                {% url 'meus_clientes_administrador' as orcamento_url %}
+            {% elif request.user.role == 'gerente' %}
+                {% url 'meus_clientes_gerente' as orcamento_url %}
+            {% else %}
+                {% url 'meus_clientes_consultor' as orcamento_url %}
+            {% endif %}
+            <a href="{{ orcamento_url }}#orcamento-{{ notification.comment.orcamento.pk }}" class="list-group-item list-group-item-action flex-column align-items-start">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Novo comentário no orçamento: {{ notification.comment.orcamento.numero_orcamento }}</h5>
+                    <small>{{ notification.created_at|timesince }} atrás</small>
+                </div>
+                <p class="mb-1">"{{ notification.comment.comentario|truncatewords:20 }}"</p>
+                <small>De: {{ notification.comment.usuario.username }}</small>
+            </a>
+        {% empty %}
+            <div class="list-group-item">
+                <p class="mb-0">Você não tem nenhuma notificação.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

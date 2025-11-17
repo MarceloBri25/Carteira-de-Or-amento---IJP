@@ -104,7 +104,7 @@
                                     <td>{{ orcamento.numero_orcamento }}</td>
                                     <td>{{ orcamento.nome_cliente.nome_completo }}</td>
                                     <td>{{ orcamento.especificador.nome_completo }}</td>
-                                    <td>R$ {{ orcamento.valor_orcamento|floatformat:2 }}</td>
+                                    <td>R$ {{ orcamento.valor_orcamento|br_format }}</td>
                                     <td>{{ orcamento.etapa }}</td>
                                     <td>
                                         {% if orcamento.termometro == 'Quente' %}
