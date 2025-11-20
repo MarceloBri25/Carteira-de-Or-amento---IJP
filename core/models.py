@@ -72,6 +72,17 @@ class Orcamento(models.Model):
     data_fechada_ganha = models.DateField(blank=True, null=True)
     subscribers = models.ManyToManyField(User, related_name='subscribed_orcamentos', blank=True)
 
+    MOTIVO_PERDA_CHOICES = [
+        ('Preço', 'Preço'),
+        ('Concorrência', 'Concorrência'),
+        ('Prazo', 'Prazo'),
+        ('Qualidade', 'Qualidade'),
+        ('Cliente Indeciso', 'Cliente Indeciso'),
+        ('Outros', 'Outros'),
+    ]
+    is_forecast = models.BooleanField(default=False)
+    motivo_perda = models.CharField(max_length=50, choices=MOTIVO_PERDA_CHOICES, blank=True, null=True)
+
     def __str__(self):
         return f'{self.nome_cliente} - {self.numero_orcamento}'
 

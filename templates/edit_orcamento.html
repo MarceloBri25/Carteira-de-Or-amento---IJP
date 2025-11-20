@@ -88,6 +88,15 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="col-md-6 mb-3" id="motivo-perda-container" style="display: none;">
+                <label for="motivo_perda" class="form-label">Motivo da Perda</label>
+                <select class="form-select" id="motivo_perda" name="motivo_perda">
+                    <option value="">Selecione um motivo</option>
+                    {% for value, name in form.fields.motivo_perda.choices %}
+                        <option value="{{ value }}" {% if value == orcamento.motivo_perda %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="col-md-6 mb-3">
                 <label for="data_fechada_ganha" class="form-label">Data Fechada e Ganha</label>
                 <input type="date" class="form-control" id="data_fechada_ganha" name="data_fechada_ganha" value="{{ orcamento.data_fechada_ganha|date:'Y-m-d' }}">
@@ -171,6 +180,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 semanaPrevisaoSelect.value = 'Semana ' + week;
             });
         }
+
+        const etapaSelect = document.getElementById('etapa');
+        const motivoPerdaContainer = document.getElementById('motivo-perda-container');
+
+        function toggleMotivoPerda() {
+            if (etapaSelect.value === 'Perdida') {
+                motivoPerdaContainer.style.display = 'block';
+            } else {
+                motivoPerdaContainer.style.display = 'none';
+            }
+        }
+
+        // Check on page load
+        toggleMotivoPerda();
+
+        // Add event listener
+        etapaSelect.addEventListener('change', toggleMotivoPerda);
     });
 </script>
 {% endblock %}

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import SetPasswordForm
 from django.views.generic import ListView
 from .models import Orcamento, Loja, User, Cliente, Especificador, JornadaClienteHistorico, Notification
 from django.shortcuts import get_object_or_404
@@ -14,6 +15,9 @@ import io
 from datetime import datetime
 from django.db import models
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+import json
+from django.forms.models import model_to_dict
 
 class UserRegistrationForm(forms.ModelForm):
     password = forms.CharField(label='Senha', widget=forms.PasswordInput)
@@ -58,6 +62,10 @@ class OrcamentoForm(forms.ModelForm):
     class Meta:
         model = Orcamento
         exclude = ['usuario']
+
+    def __init__(self, *args, **kwargs):
+        super(OrcamentoForm, self).__init__(*args, **kwargs)
+        self.fields['motivo_perda'].required = False
 
 class OrcamentoAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -147,17 +155,36 @@ class UserListView(ListView):
         return context
 
 def user_edit_view(request, pk):
-    user = get_object_or_404(User, pk=pk)
+    user_to_edit = get_object_or_404(User, pk=pk)
+    
     if request.method == 'POST':
-        form = UserEditForm(request.POST, instance=user)
-        if form.is_valid():
-            form.save()
-            return redirect('user_list')
-    else:
-        form = UserEditForm(instance=user)
+        # Check which form was submitted
+        if 'update_profile' in request.POST:
+            form = UserEditForm(request.POST, instance=user_to_edit)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Perfil do usuário atualizado com sucesso!')
+                return redirect('user_edit', pk=user_to_edit.pk)
+        
+        elif 'update_password' in request.POST and request.user.role == 'administrador':
+            password_form = SetPasswordForm(user=user_to_edit, data=request.POST)
+            if password_form.is_valid():
+                password_form.save()
+                messages.success(request, f'A senha do usuário {user_to_edit.username} foi alterada com sucesso!')
+                return redirect('user_edit', pk=user_to_edit.pk)
+    
+    # For GET request, initialize both forms
+    form = UserEditForm(instance=user_to_edit)
+    password_form = SetPasswordForm(user=user_to_edit)
     
     lojas = Loja.objects.all()
-    return render(request, 'user_edit.html', {'form': form, 'user': user, 'lojas': lojas})
+    context = {
+        'form': form,
+        'password_form': password_form,
+        'user': user_to_edit,
+        'lojas': lojas
+    }
+    return render(request, 'user_edit.html', context)
 
 def user_deactivate_view(request, pk):
     user = get_object_or_404(User, pk=pk)
@@ -805,6 +832,47 @@ def administrador_dashboard(request):
         total_comprado=Sum('orcamento__valor_orcamento', filter=especificadores_filter)
     ).order_by('-total_comprado')
 
+    # Desempenho da Loja
+    lojas_all = Loja.objects.all()
+    loja_performance = []
+    for loja in lojas_all:
+        # Base queryset for the store
+        orcamentos_loja_base = Orcamento.objects.filter(usuario__loja=loja)
+
+        # Apply filters for 'carteira'
+        orcamentos_carteira = orcamentos_loja_base
+        if selected_year:
+            orcamentos_carteira = orcamentos_carteira.filter(data_previsao_fechamento__year=selected_year)
+        if selected_month:
+            orcamentos_carteira = orcamentos_carteira.filter(data_previsao_fechamento__month=selected_month)
+        
+        total_carteira = orcamentos_carteira.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+
+        # Apply filters for 'vendido'
+        orcamentos_vendido = orcamentos_loja_base.filter(etapa='Fechada e Ganha')
+        if selected_year:
+            orcamentos_vendido = orcamentos_vendido.filter(data_fechada_ganha__year=selected_year)
+        if selected_month:
+            orcamentos_vendido = orcamentos_vendido.filter(data_fechada_ganha__month=selected_month)
+
+        total_vendido = orcamentos_vendido.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        
+        percentual_vendido = (total_vendido / total_carteira * 100) if total_carteira > 0 else 0
+        
+        # Generate initials
+        initials = "".join(part[0] for part in loja.nome.split()).upper()
+
+        loja_performance.append({
+            'nome': loja.nome,
+            'total_carteira': total_carteira,
+            'total_vendido': total_vendido,
+            'percentual_vendido': round(percentual_vendido, 2),
+            'initials': initials,
+        })
+
+    # Sort by name
+    loja_performance = sorted(loja_performance, key=lambda x: x['nome'])
+
     # Filter options
     available_years = Orcamento.objects.dates('data_previsao_fechamento', 'year', order='DESC')
     months_choices = {
@@ -843,6 +911,7 @@ def administrador_dashboard(request):
         'morno_data': morno_data,
         'frio_data': frio_data,
         'especificadores_ranking': especificadores_ranking,
+        'loja_performance': loja_performance,
         'available_years': [d.year for d in available_years],
         'selected_year': selected_year,
         'months_choices': months_choices,
@@ -1134,3 +1203,253 @@ def notifications_view(request):
     # Mark notifications as read when the user views them
     notifications.update(is_read=True)
     return render(request, 'notifications.html', {'notifications': notifications})
+
+@login_required
+def gerente_forecast_view(request):
+    if request.user.role != 'gerente':
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('home')
+
+    gerente_loja = request.user.loja
+    if not gerente_loja:
+        messages.error(request, 'Você não está associado a nenhuma loja.')
+        return redirect('home')
+
+    # Base queryset for all budgets in the manager's store
+    base_orcamentos = Orcamento.objects.filter(usuario__loja=gerente_loja)
+
+    # Budgets already in forecast (should not be filtered)
+    orcamentos_in_forecast = base_orcamentos.filter(is_forecast=True).order_by('-data_previsao_fechamento')
+
+    # Eligible budgets that are NOT in forecast
+    eligible_stages = ['Especificação', 'Follow-up', 'Em Negociação']
+    orcamentos_elegiveis = base_orcamentos.filter(is_forecast=False, etapa__in=eligible_stages)
+
+    # Get filter parameters
+    selected_year = request.GET.get('year')
+    selected_month = request.GET.get('month')
+    selected_especificador = request.GET.get('especificador')
+    selected_cliente = request.GET.get('cliente')
+    selected_etapa = request.GET.get('etapa')
+    selected_termometro = request.GET.get('termometro')
+
+    # Apply filters to the eligible list
+    if selected_year:
+        orcamentos_elegiveis = orcamentos_elegiveis.filter(data_previsao_fechamento__year=selected_year)
+    if selected_month:
+        orcamentos_elegiveis = orcamentos_elegiveis.filter(data_previsao_fechamento__month=selected_month)
+    if selected_especificador:
+        orcamentos_elegiveis = orcamentos_elegiveis.filter(especificador__id=selected_especificador)
+    if selected_cliente:
+        orcamentos_elegiveis = orcamentos_elegiveis.filter(nome_cliente__id=selected_cliente)
+    if selected_etapa:
+        orcamentos_elegiveis = orcamentos_elegiveis.filter(etapa=selected_etapa)
+    if selected_termometro:
+        orcamentos_elegiveis = orcamentos_elegiveis.filter(termometro=selected_termometro)
+
+    # Get filter options from the base queryset to show all possibilities
+    available_years = base_orcamentos.dates('data_previsao_fechamento', 'year', order='DESC')
+    all_especificadores = Especificador.objects.filter(orcamento__in=base_orcamentos).distinct()
+    all_clientes = Cliente.objects.filter(orcamento__in=base_orcamentos).distinct()
+    stage_choices = Orcamento.STAGE_CHOICES
+    thermometer_choices = Orcamento.THERMOMETER_CHOICES
+    months_choices = {
+        '1': 'Janeiro', '2': 'Fevereiro', '3': 'Março', '4': 'Abril',
+        '5': 'Maio', '6': 'Junho', '7': 'Julho', '8': 'Agosto',
+        '9': 'Setembro', '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
+    }
+
+    context = {
+        'orcamentos_in_forecast': orcamentos_in_forecast,
+        'orcamentos_elegiveis': orcamentos_elegiveis.order_by('-data_previsao_fechamento'),
+        'available_years': [d.year for d in available_years],
+        'months_choices': months_choices,
+        'all_especificadores': all_especificadores,
+        'all_clientes': all_clientes,
+        'stage_choices': stage_choices,
+        'thermometer_choices': thermometer_choices,
+        'selected_year': selected_year,
+        'selected_month': selected_month,
+        'selected_especificador': selected_especificador,
+        'selected_cliente': selected_cliente,
+        'selected_etapa': selected_etapa,
+        'selected_termometro': selected_termometro,
+    }
+    return render(request, 'gerente_forecast.html', context)
+
+@login_required
+def admin_forecast_dashboard_view(request):
+    if request.user.role != 'administrador':
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('home')
+
+    lojas = Loja.objects.all()
+    dashboard_data = []
+    grand_total_forecast = 0
+
+    for loja in lojas:
+        # Orçamentos em forecast para a carteira da loja
+        forecast_orcamentos = Orcamento.objects.filter(usuario__loja=loja, is_forecast=True).select_related('nome_cliente', 'especificador')
+
+        # 1. Visão Geral da Carteira de Forecast
+        valor_total_carteira = forecast_orcamentos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        orcamentos_count = forecast_orcamentos.count()
+        grand_total_forecast += valor_total_carteira
+
+        # 2. Total Fechado e Ganho (histórico da loja, não apenas forecast)
+        ganhos_loja = Orcamento.objects.filter(usuario__loja=loja, etapa='Fechada e Ganha')
+        total_fechado_ganho = ganhos_loja.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        count_fechado_ganho = ganhos_loja.count()
+
+        # 3. Orçamentos por Temperatura (dentro do forecast)
+        quentes = forecast_orcamentos.filter(termometro='Quente')
+        quentes_valor = quentes.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        quentes_count = quentes.count()
+
+        mornos = forecast_orcamentos.filter(termometro='Morno')
+        mornos_valor = mornos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        mornos_count = mornos.count()
+
+        frios = forecast_orcamentos.filter(termometro='Frio')
+        frios_valor = frios.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        frios_count = frios.count()
+
+        # 4. Total de Orçamentos Perdidos (histórico da loja)
+        perdidos_loja = Orcamento.objects.filter(usuario__loja=loja, etapa='Perdida')
+        total_perdido = perdidos_loja.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
+        count_perdido = perdidos_loja.count()
+
+        dashboard_data.append({
+            'loja_id': loja.id,
+            'loja_nome': loja.nome,
+            'valor_total_carteira': valor_total_carteira,
+            'orcamentos_count': orcamentos_count,
+            'total_fechado_ganho': total_fechado_ganho,
+            'count_fechado_ganho': count_fechado_ganho,
+            'quentes_valor': quentes_valor,
+            'quentes_count': quentes_count,
+            'mornos_valor': mornos_valor,
+            'mornos_count': mornos_count,
+            'frios_valor': frios_valor,
+            'frios_count': frios_count,
+            'total_perdido': total_perdido,
+            'count_perdido': count_perdido,
+            'orcamentos': forecast_orcamentos, # Passando a lista de orçamentos
+        })
+
+    # Análise de motivos de perda (geral, não por loja)
+    motivos_perda = Orcamento.objects.filter(etapa='Perdida').exclude(motivo_perda__isnull=True).exclude(motivo_perda__exact='').values('motivo_perda').annotate(
+        count=Count('id')
+    ).order_by('-count')
+
+    context = {
+        'dashboard_data': dashboard_data,
+        'grand_total_forecast': grand_total_forecast,
+        'motivos_perda': motivos_perda,
+    }
+    return render(request, 'admin_forecast_dashboard.html', context)
+
+@login_required
+def get_orcamento_details(request, pk):
+    try:
+        orcamento = get_object_or_404(Orcamento, pk=pk)
+
+        # Manually build the dictionary to ensure correct serialization
+        orcamento_data = {
+            'id': orcamento.id,
+            'numero_orcamento': orcamento.numero_orcamento,
+            'valor_orcamento': str(orcamento.valor_orcamento),
+            'data_solicitacao': orcamento.data_solicitacao.strftime('%Y-%m-%d') if orcamento.data_solicitacao else '',
+            'data_envio': orcamento.data_envio.strftime('%Y-%m-%d') if orcamento.data_envio else '',
+            'data_previsao_fechamento': orcamento.data_previsao_fechamento.strftime('%Y-%m-%d') if orcamento.data_previsao_fechamento else '',
+            'etapa': orcamento.etapa,
+            'termometro': orcamento.termometro,
+            'categoria': orcamento.categoria,
+            'motivo_perda': orcamento.motivo_perda,
+            # Handle ForeignKey fields by sending their ID
+            'nome_cliente': orcamento.nome_cliente.id if orcamento.nome_cliente else None,
+            'especificador': orcamento.especificador.id if orcamento.especificador else None,
+        }
+
+        # Get choices for select fields in a more JS-friendly format
+        choices = {
+            'etapa': [{'value': c[0], 'label': c[1]} for c in Orcamento.STAGE_CHOICES],
+            'termometro': [{'value': c[0], 'label': c[1]} for c in Orcamento.THERMOMETER_CHOICES],
+            'categoria': [{'value': c[0], 'label': c[1]} for c in Orcamento.CATEGORY_CHOICES],
+            'motivo_perda': [{'value': c[0], 'label': c[1]} for c in Orcamento.MOTIVO_PERDA_CHOICES],
+        }
+
+        # Get related data for dropdowns
+        related_data = {
+            'clientes': list(Cliente.objects.values('id', 'nome_completo')),
+            'especificadores': list(Especificador.objects.values('id', 'nome_completo')),
+        }
+
+        data = {
+            'orcamento': orcamento_data,
+            'choices': choices,
+            'related_data': related_data,
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        # Log the error for debugging and return a proper error response
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def update_orcamento_details(request, pk):
+    try:
+        orcamento = get_object_or_404(Orcamento, pk=pk)
+        data = json.loads(request.body)
+
+        # Use a form to validate and save the data
+        form = OrcamentoForm(data, instance=orcamento)
+        
+        if form.is_valid():
+            updated_orcamento = form.save()
+
+            # Prepare data to send back to the frontend for UI update
+            updated_data = {
+                'id': updated_orcamento.id,
+                'valor_orcamento': str(updated_orcamento.valor_orcamento),
+                'nome_cliente_nome': updated_orcamento.nome_cliente.nome_completo if updated_orcamento.nome_cliente else '-',
+                'especificador_nome': updated_orcamento.especificador.nome_completo if updated_orcamento.especificador else '',
+                'etapa': updated_orcamento.etapa,
+            }
+            return JsonResponse({'status': 'success', 'updated_data': updated_data})
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def update_forecast_status(request):
+    if request.user.role != 'gerente':
+        return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        orcamento_id = data.get('orcamento_id')
+        status = data.get('status')
+
+        if orcamento_id is None or status is None:
+            return JsonResponse({'status': 'error', 'message': 'Missing parameters.'}, status=400)
+
+        orcamento = get_object_or_404(Orcamento, id=orcamento_id)
+
+        # Security check: ensure the budget belongs to the manager's store
+        if orcamento.usuario.loja != request.user.loja:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized.'}, status=403)
+
+        orcamento.is_forecast = status
+        orcamento.save()
+
+        return JsonResponse({'status': 'success', 'message': 'Forecast status updated.'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

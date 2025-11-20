@@ -8,7 +8,9 @@ from .views import (
     reverter_orcamento_ganho, administrador_dashboard, administrador_criar_orcamento, add_jornada_cliente_comment,
     add_cliente_full, clientes_cadastrados, cliente_add_view, cliente_edit_view, importar_orcamentos, orcamentos_fechados_view,
     download_template_view, search_clientes, search_especificadores, notifications_view,
-    especificadores_cadastrados, especificador_add_view, especificador_edit_view
+    especificadores_cadastrados, especificador_add_view, especificador_edit_view,
+    gerente_forecast_view, admin_forecast_dashboard_view, get_orcamento_details, update_orcamento_details,
+    update_forecast_status
 )
 
 urlpatterns = [
@@ -24,11 +26,14 @@ urlpatterns = [
     path('dashboard/', consultor_dashboard, name='consultor_dashboard'),
     path('consultor/criar-orcamento/', consultor_criar_orcamento, name='consultor_criar_orcamento'),
     path('administrador/dashboard/', administrador_dashboard, name='administrador_dashboard'),
+    path('administrador/forecast-dashboard/', admin_forecast_dashboard_view, name='admin_forecast_dashboard'),
     path('administrador/criar-orcamento/', administrador_criar_orcamento, name='administrador_criar_orcamento'),
     path('administrador/importar-orcamentos/', importar_orcamentos, name='importar_orcamentos'),
     path('administrador/importar-orcamentos/download-template/', download_template_view, name='download_template'),
     path('gerente/dashboard/', gerente_dashboard, name='gerente_dashboard'),
     path('gerente/criar-orcamento/', gerente_criar_orcamento, name='gerente_criar_orcamento'),
+    path('gerente/forecast/', gerente_forecast_view, name='gerente_forecast'),
+    path('gerente/forecast/update/', update_forecast_status, name='update_forecast_status'),
     path('gerente/meus-clientes/', meus_clientes_view, name='meus_clientes_gerente'),
     path('consultor/meus-clientes/', meus_clientes_view, name='meus_clientes_consultor'),
     path('administrador/meus-clientes/', meus_clientes_view, name='meus_clientes_administrador'),
@@ -51,4 +56,9 @@ urlpatterns = [
     path('especificador/add/', especificador_add_view, name='especificador_add'),
     path('especificador/<int:pk>/edit/', especificador_edit_view, name='especificador_edit'),
     path('orcamentos-fechados/', orcamentos_fechados_view, name='orcamentos_fechados'),
+    
+    # API URLs for modal
+    path('api/orcamento/<int:pk>/details/', get_orcamento_details, name='get_orcamento_details'),
+    path('api/orcamento/<int:pk>/update/', update_orcamento_details, name='update_orcamento_details'),
 ]
+

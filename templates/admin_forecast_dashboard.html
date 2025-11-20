@@ -1,0 +1,473 @@
+{% extends 'home.html' %}
+{% load humanize %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}Dashboard de Forecast{% endblock %}
+
+{% block navbar_brand %}
+<a class="navbar-brand" href="{% url 'home' %}">
+    <img src="{% static 'Image/Logo IJP Umbrella System Branco 2.png' %}" alt="IJP Umbrella System Logo" style="height: 40px;">
+</a>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Reset e Adaptação do Layout */
+    :root {
+        --dark-glass-bg: rgba(30, 30, 30, 0.4);
+        --dark-glass-border: rgba(255, 255, 255, 0.1);
+        --dark-card-bg: rgba(50, 50, 50, 0.4);
+        --text-primary-dark: #f5f5f5;
+        --text-secondary-dark: #ababab;
+    }
+
+    /* Força o container do home.html a ocupar a largura total */
+    .container, .container-fluid {
+        max-width: 100% !important;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Aplica o fundo escuro e remove o padding do body */
+    body {
+        background: linear-gradient(45deg, #111111, #2d2d2d, #444444);
+        background-size: 300% 300%;
+        animation: gradient-animation 18s ease infinite;
+        padding-top: 56px; /* Altura da navbar */
+    }
+
+    @keyframes gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* Adapta a Navbar para o tema escuro */
+    .navbar {
+        background: rgba(10, 10, 10, 0.6) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--dark-glass-border) !important;
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 1030;
+    }
+    .navbar .navbar-brand, .navbar .nav-link {
+        color: var(--text-primary-dark) !important;
+    }
+    .navbar .nav-link:hover {
+        color: #ffffff !important;
+    }
+    .navbar .navbar-toggler-icon {
+        filter: invert(1);
+    }
+    .navbar .navbar-brand img {
+        margin-left: 15px; /* Adiciona espaçamento à esquerda da logo */
+    }
+
+    /* Container principal do Kanban */
+    .kanban-full-container {
+        color: var(--text-primary-dark);
+        height: calc(100vh - 56px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main-header-k {
+        background: transparent;
+        padding: 1rem 2rem;
+        z-index: 100;
+    }
+
+    .main-content-k {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .kanban-board-container {
+        flex-grow: 1;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        padding: 1.5rem 2rem;
+    }
+
+    .kanban-column {
+        display: inline-flex;
+        flex-direction: column;
+        vertical-align: top;
+        width: 340px;
+        margin-right: 1.5rem;
+        white-space: normal;
+        background: var(--dark-glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--dark-glass-border);
+        border-radius: 12px;
+        max-height: calc(100vh - 56px - 120px - 3rem); /* viewport - navbar - header - padding */
+    }
+
+    .kanban-column-header {
+        padding: 1rem 1.2rem;
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--dark-glass-border);
+    }
+
+    .kanban-column-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary-dark);
+    }
+
+    .kanban-column-total {
+        font-size: 0.9rem;
+        font-weight: 400;
+        color: var(--text-secondary-dark);
+    }
+
+    .kanban-cards {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+
+    .kanban-card {
+        background: var(--dark-card-bg);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--dark-glass-border);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .kanban-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        background: rgba(80, 80, 80, 0.5);
+    }
+    
+    .kanban-card .card-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.75rem;
+    }
+
+    .kanban-card p {
+        margin-bottom: 0.3rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary-dark);
+        display: flex;
+        align-items: center;
+    }
+    
+    .kanban-card p i {
+        margin-right: 10px;
+        width: 16px;
+        text-align: center;
+        color: var(--text-secondary-dark);
+    }
+
+    /* Scrollbar customizada */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+.kanban-card.bg-success-subtle {
+        background: rgba(0, 255, 0, 0.1);
+        border-left: 4px solid #00ff00;
+    }
+    .kanban-card.bg-success-subtle:hover {
+        background: rgba(0, 255, 0, 0.2);
+    }
+
+    /* Modal com o mesmo estilo */
+    .modal-content {
+        background: var(--dark-glass-bg);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid var(--dark-glass-border);
+        color: var(--text-primary-dark);
+    }
+    .modal-header, .modal-footer {
+        border-color: var(--dark-glass-border);
+    }
+    .modal-content .form-control, .modal-content .form-select {
+        background-color: rgba(0,0,0,0.3);
+        border: 1px solid var(--dark-glass-border);
+        color: var(--text-primary-dark);
+    }
+    .modal-content .form-control:focus, .modal-content .form-select:focus {
+        background-color: rgba(0,0,0,0.4);
+        border-color: rgba(255, 255, 255, 0.4);
+        color: #fff;
+        box-shadow: none;
+    }
+    .modal-content .form-label { color: var(--text-secondary-dark); }
+    .modal-content .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+</style>
+
+<div class="kanban-full-container">
+    <header class="main-header-k">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0 text-light">Forecast</h4>
+                <span class="text-secondary-dark">Visão geral das lojas</span>
+            </div>
+            <div class="d-flex align-items-center gap-4">
+                <div class="text-end">
+                    <h6 class="text-secondary-dark mb-0" style="font-size: 0.9rem;">Valor Total em Forecast</h6>
+                    <h4 class="mb-0 text-light">R$ {{ grand_total_forecast|br_format }}</h4>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content-k">
+        <div class="kanban-board-container">
+            <div class="kanban-board">
+                {% for loja in dashboard_data %}
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <h3 class="kanban-column-title">{{ loja.loja_nome }}</h3>
+                        <div class="kanban-column-total">
+                            {{ loja.orcamentos_count }} orçamentos | R$ {{ loja.valor_total_carteira|br_format }}
+                        </div>
+                    </div>
+                    <div class="kanban-cards">
+                        {% for orcamento in loja.orcamentos %}
+                        <div class="kanban-card {% if orcamento.etapa == 'Fechada e Ganha' %}bg-success-subtle{% endif %}" data-bs-toggle="modal" data-bs-target="#orcamentoEditModal" data-orcamento-id="{{ orcamento.id }}">
+                            <div class="card-value">
+                                R$ {{ orcamento.valor_orcamento|br_format }}
+                            </div>
+                            <p title="Etapa">
+                                <i class="fas fa-info-circle fa-fw"></i>
+                                {{ orcamento.get_etapa_display }}
+                            </p>
+                            <p title="Cliente">
+                                <i class="fas fa-user fa-fw"></i>
+                                {{ orcamento.nome_cliente.nome_completo|default:"-" }}
+                            </p>
+                            {% if orcamento.especificador %}
+                            <p title="Especificador">
+                                <i class="fas fa-user-tie fa-fw"></i>
+                                {{ orcamento.especificador.nome_completo }}
+                            </p>
+                            {% endif %}
+                            <p title="Previsão de Fechamento">
+                                <i class="fas fa-calendar-week fa-fw"></i>
+                                {{ orcamento.semana_previsao_fechamento|default:"Não definida" }}
+                            </p>
+                        </div>
+                        {% empty %}
+                        <div class="text-center p-4">
+                            <i class="fas fa-box-open fa-2x text-secondary-dark mb-2"></i>
+                            <p class="text-secondary-dark">Nenhum orçamento em forecast.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="w-100 text-center">
+                    <div class="alert alert-light bg-opacity-10" role="alert">
+                      Nenhum dado de forecast disponível para exibir.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal de Edição de Orçamento -->
+<div class="modal fade" id="orcamentoEditModal" tabindex="-1" aria-labelledby="orcamentoEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orcamentoEditModalLabel">Detalhes do Orçamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-form-content">
+            <div class="text-center p-5">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Fechar</button>
+        <button type="button" class="btn btn-primary" id="saveOrcamentoChanges">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const orcamentoEditModal = document.getElementById('orcamentoEditModal');
+    const modalFormContent = document.getElementById('modal-form-content');
+    const saveChangesBtn = document.getElementById('saveOrcamentoChanges');
+    let currentOrcamentoId = null;
+    let clickedCardElement = null;
+
+    orcamentoEditModal.addEventListener('show.bs.modal', function (event) {
+        clickedCardElement = event.relatedTarget;
+        currentOrcamentoId = clickedCardElement.getAttribute('data-orcamento-id');
+        modalFormContent.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Carregando...</span></div></div>`;
+
+        fetch(`/api/orcamento/${currentOrcamentoId}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                renderForm(data);
+            })
+            .catch(error => {
+                console.error('Error fetching orcamento details:', error);
+                modalFormContent.innerHTML = '<p class="text-center text-danger">Erro ao carregar os dados.</p>';
+            });
+    });
+
+    function renderForm(data) {
+        const orcamento = data.orcamento;
+        let formHtml = `<form id="orcamento-edit-form" class="p-2">`;
+
+        formHtml += `
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="numero_orcamento" class="form-label">Número do Orçamento</label>
+                    <input type="text" class="form-control" id="numero_orcamento" name="numero_orcamento" value="${orcamento.numero_orcamento || ''}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="valor_orcamento" class="form-label">Valor do Orçamento</label>
+                    <input type="number" step="0.01" class="form-control" id="valor_orcamento" name="valor_orcamento" value="${orcamento.valor_orcamento || ''}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="data_solicitacao" class="form-label">Data de Solicitação</label>
+                    <input type="date" class="form-control" id="data_solicitacao" name="data_solicitacao" value="${orcamento.data_solicitacao || ''}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="data_previsao_fechamento" class="form-label">Previsão de Fechamento</label>
+                    <input type="date" class="form-control" id="data_previsao_fechamento" name="data_previsao_fechamento" value="${orcamento.data_previsao_fechamento || ''}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nome_cliente" class="form-label">Cliente</label>
+                    <select class="form-select" name="nome_cliente" id="nome_cliente">
+                        ${data.related_data.clientes.map(c => `<option value="${c.id}" ${c.id == orcamento.nome_cliente ? 'selected' : ''}>${c.nome_completo}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="especificador" class="form-label">Especificador</label>
+                    <select class="form-select" name="especificador" id="especificador">
+                        <option value="">Nenhum</option>
+                        ${data.related_data.especificadores.map(e => `<option value="${e.id}" ${e.id == orcamento.especificador ? 'selected' : ''}>${e.nome_completo}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="etapa" class="form-label">Etapa</label>
+                    <select class="form-select" name="etapa" id="etapa">
+                        ${data.choices.etapa.map(c => `<option value="${c.value}" ${c.value == orcamento.etapa ? 'selected' : ''}>${c.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="termometro" class="form-label">Termômetro</label>
+                    <select class="form-select" name="termometro" id="termometro">
+                        ${data.choices.termometro.map(c => `<option value="${c.value}" ${c.value == orcamento.termometro ? 'selected' : ''}>${c.label}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+             <div class="row">
+                <div class="col-md-6 mb-3" id="motivo-perda-container" style="${orcamento.etapa === 'Perdida' ? 'display: block;' : 'display: none;'}">
+                    <label for="motivo_perda" class="form-label">Motivo da Perda</label>
+                    <select class="form-select" name="motivo_perda" id="motivo_perda">
+                        <option value="">Selecione um motivo</option>
+                        ${data.choices.motivo_perda.map(c => `<option value="${c.value}" ${c.value == orcamento.motivo_perda ? 'selected' : ''}>${c.label}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+        `;
+
+        formHtml += `</form>`;
+        modalFormContent.innerHTML = formHtml;
+
+        document.getElementById('etapa').addEventListener('change', function() {
+            document.getElementById('motivo-perda-container').style.display = this.value === 'Perdida' ? 'block' : 'none';
+        });
+    }
+
+    saveChangesBtn.addEventListener('click', function() {
+        const form = document.getElementById('orcamento-edit-form');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        if (!data.especificador) data.especificador = null;
+        if (!data.nome_cliente) data.nome_cliente = null;
+
+        fetch(`/api/orcamento/${currentOrcamentoId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'success') {
+                bootstrap.Modal.getInstance(orcamentoEditModal).hide();
+                
+                const updatedOrcamento = result.updated_data;
+                const etapaDisplayElement = clickedCardElement.querySelector('[title="Etapa"]');
+
+                if (updatedOrcamento.etapa === 'Fechada e Ganha') {
+                    clickedCardElement.classList.add('bg-success-subtle');
+                } else {
+                    clickedCardElement.classList.remove('bg-success-subtle');
+                }
+
+                if (etapaDisplayElement) {
+                    etapaDisplayElement.innerHTML = `<i class="fas fa-info-circle fa-fw"></i> ${updatedOrcamento.etapa}`;
+                }
+                
+                clickedCardElement.querySelector('.card-value').textContent = `R$ ${parseFloat(updatedOrcamento.valor_orcamento).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                clickedCardElement.querySelector('[title="Cliente"]').innerHTML = `<i class="fas fa-user fa-fw"></i> ${updatedOrcamento.nome_cliente_nome}`;
+                
+                const especifP = clickedCardElement.querySelector('[title="Especificador"]');
+                if (updatedOrcamento.especificador_nome) {
+                    if(especifP) {
+                        especifP.innerHTML = `<i class="fas fa-user-tie fa-fw"></i> ${updatedOrcamento.especificador_nome}`;
+                    } else {
+                        const newP = document.createElement('p');
+                        newP.title = "Especificador";
+                        newP.innerHTML = `<i class="fas fa-user-tie fa-fw"></i> ${updatedOrcamento.especificador_nome}`;
+                        clickedCardElement.querySelector('[title="Cliente"]').after(newP);
+                    }
+                } else if (especifP) {
+                    especifP.remove();
+                }
+
+            } else {
+                alert('Erro ao salvar: ' + JSON.stringify(result.errors));
+            }
+        })
+        .catch(error => {
+            console.error('Error updating orcamento:', error);
+            alert('Ocorreu um erro de rede.');
+        });
+    });
+});
+</script>
+{% endblock %}

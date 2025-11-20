@@ -6,6 +6,20 @@
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <div class="container-fluid mt-4">
+    <style>
+        .initials-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #282c32; /* Bootstrap primary blue */
+            color: #fff;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+    </style>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Dashboard do Administrador</h2>
         <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
@@ -215,9 +229,30 @@
         </div>
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
-                <div class="card-header">Previsão de Fechamento por Semana</div>
-                <div class="card-body">
-                    <canvas id="weeklyForecastChart"></canvas>
+                <div class="card-header">Desempenho por Loja</div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for loja in loja_performance %}
+                        <li class="list-group-item d-flex align-items-center">
+                            <div class="initials-avatar me-3">
+                                {{ loja.initials }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ loja.nome }}</h5>
+                                    <small class="text-success fw-bold">{{ loja.percentual_vendido }}%</small>
+                                </div>
+                                <p class="mb-1">
+                                    <strong>Vendido:</strong>
+                                    <span class="text-success">R$ {{ loja.total_vendido|br_format }}</span>
+                                </p>
+                                <small class="text-muted">
+                                    <strong>Carteira no Mês:</strong> R$ {{ loja.total_carteira|br_format }}
+                                </small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
@@ -225,7 +260,7 @@
 
     <!-- Gráficos Secundários -->
     <div class="row">
-        <div class="col-lg-8 mb-4">
+        <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header">Ranking de Especificadores</div>
                 <div class="card-body" style="max-height: 500px; overflow-y: auto;">
@@ -253,6 +288,14 @@
                         </li>
                         {% endfor %}
                     </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Previsão de Fechamento por Semana</div>
+                <div class="card-body">
+                    <canvas id="weeklyForecastChart"></canvas>
                 </div>
             </div>
         </div>
