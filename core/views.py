@@ -615,6 +615,7 @@ def todos_orcamentos_view(request):
     selected_etapa = request.GET.get('etapa')
     selected_termometro = request.GET.get('termometro')
     selected_lojas = request.GET.getlist('loja')
+    selected_consultor = request.GET.get('consultor')
 
     # Apply filters
     orcamentos = base_orcamentos
@@ -632,6 +633,8 @@ def todos_orcamentos_view(request):
         orcamentos = orcamentos.filter(termometro=selected_termometro)
     if selected_lojas:
         orcamentos = orcamentos.filter(usuario__loja__id__in=selected_lojas)
+    if selected_consultor:
+        orcamentos = orcamentos.filter(usuario__id=selected_consultor)
 
     # Get selected objects for repopulating form
     selected_cliente_obj = None
@@ -655,6 +658,10 @@ def todos_orcamentos_view(request):
     stage_choices = Orcamento.STAGE_CHOICES
     thermometer_choices = Orcamento.THERMOMETER_CHOICES
     all_lojas = Loja.objects.all()
+    
+    all_consultores = User.objects.filter(role='consultor')
+    if user.role == 'gerente':
+        all_consultores = all_consultores.filter(loja=user.loja)
 
     context = {
         'orcamentos': orcamentos,
@@ -665,6 +672,7 @@ def todos_orcamentos_view(request):
         'stage_choices': stage_choices,
         'thermometer_choices': thermometer_choices,
         'all_lojas': all_lojas,
+        'all_consultores': all_consultores,
         'selected_lojas': [int(x) for x in selected_lojas],
         'selected_cliente_obj': selected_cliente_obj,
         'selected_especificador_obj': selected_especificador_obj,

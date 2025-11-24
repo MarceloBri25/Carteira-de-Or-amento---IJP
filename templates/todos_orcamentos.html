@@ -86,6 +86,19 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% if user.role == 'administrador' or user.role == 'gerente' %}
+                    <div class="col-md-3">
+                        <label for="filter-consultor" class="form-label">Consultor</label>
+                        <select class="form-select" id="filter-consultor" name="consultor">
+                            <option value="">Todos</option>
+                            {% for consultor in all_consultores %}
+                                <option value="{{ consultor.id }}" {% if request.GET.consultor|default:"" == consultor.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ consultor.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
                     {% if user.role == 'administrador' %}
                     <div class="col-md-6">
                         <label for="filter-loja" class="form-label">Loja</label>
