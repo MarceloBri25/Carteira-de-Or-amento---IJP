@@ -1170,6 +1170,7 @@ def orcamentos_fechados_view(request):
     selected_loja = request.GET.get('loja')
     selected_month = request.GET.get('month')
     selected_year = request.GET.get('year')
+    selected_especificador = request.GET.get('especificador')
 
     # Apply filters
     if selected_cliente:
@@ -1182,10 +1183,13 @@ def orcamentos_fechados_view(request):
         orcamentos = orcamentos.filter(data_fechada_ganha__month=selected_month)
     if selected_year:
         orcamentos = orcamentos.filter(data_fechada_ganha__year=selected_year)
+    if selected_especificador:
+        orcamentos = orcamentos.filter(especificador__id=selected_especificador)
 
     # Get filter options
     all_clientes = Cliente.objects.filter(orcamento__in=orcamentos).distinct()
     all_consultores = User.objects.filter(role='consultor', orcamento__in=orcamentos).distinct()
+    all_especificadores = Especificador.objects.filter(orcamento__in=orcamentos).distinct()
     all_lojas = Loja.objects.all() # Show all stores for filtering
     available_months = Orcamento.objects.filter(etapa='Fechada e Ganha').dates('data_fechada_ganha', 'month', order='ASC')
     available_years = Orcamento.objects.filter(etapa='Fechada e Ganha').dates('data_fechada_ganha', 'year', order='DESC')
@@ -1200,6 +1204,7 @@ def orcamentos_fechados_view(request):
         'orcamentos': orcamentos,
         'all_clientes': all_clientes,
         'all_consultores': all_consultores,
+        'all_especificadores': all_especificadores,
         'all_lojas': all_lojas,
         'available_months': available_months,
         'available_years': [d.year for d in available_years],
@@ -1209,6 +1214,7 @@ def orcamentos_fechados_view(request):
         'selected_loja': selected_loja,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'selected_especificador': selected_especificador,
     }
     return render(request, 'orcamentos_fechados.html', context)
 
