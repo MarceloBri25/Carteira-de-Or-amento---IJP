@@ -1,9 +1,10 @@
+
 {% extends "home.html" %}
 {% load custom_filters %}
 
 {% block title %}
     {% if user.role == 'consultor' %}
-        Meus Orçamentos
+        Jornada do Cliente
     {% else %}
         Todos os Orçamentos
     {% endif %}
@@ -17,7 +18,7 @@
         <div>
             <h2 class="text-dark">
                 {% if user.role == 'consultor' %}
-                    Meus Orçamentos
+                    Jornada do Cliente
                 {% else %}
                     Todos os Orçamentos
                 {% endif %}
@@ -269,3 +270,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+

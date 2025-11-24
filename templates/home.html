@@ -199,7 +199,7 @@
                                 </ul>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'meus_clientes_administrador' %}">Meus Orçamentos</a>
+                                <a class="nav-link" href="{% url 'meus_clientes_administrador' %}">Jornada do Cliente</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'administrador_criar_orcamento' %}">Criar Orçamento</a>
@@ -225,7 +225,7 @@
                         {% endif %}
                         {% if user.role == 'consultor' %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'meus_clientes_consultor' %}">Meus Orçamentos</a>
+                                <a class="nav-link" href="{% url 'meus_clientes_consultor' %}">Jornada do Cliente</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'consultor_todos_orcamentos' %}">Todos os Orçamentos</a>
@@ -248,7 +248,7 @@
                                 <a class="nav-link" href="{% url 'gerente_forecast' %}">Forecast</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'meus_clientes_gerente' %}">Meus Orçamentos</a>
+                                <a class="nav-link" href="{% url 'meus_clientes_gerente' %}">Jornada do Cliente</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'todos_orcamentos_gerente' %}">Todos os Orçamentos</a>
