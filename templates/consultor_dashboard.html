@@ -74,6 +74,15 @@
                             <option value="Semana 5" {% if "Semana 5" in selected_semanas %}selected{% endif %}>Semana 5</option>
                         </select>
                     </div>
+                    <div class="col-md-3">
+                        <label for="filter-status" class="form-label text-dark">Status</label>
+                        <select class="form-select" id="filter-status" name="status">
+                            <option value="">Todos</option>
+                            <option value="Quente" {% if selected_status == "Quente" %}selected{% endif %}>Quente</option>
+                            <option value="Morno" {% if selected_status == "Morno" %}selected{% endif %}>Morno</option>
+                            <option value="Frio" {% if selected_status == "Frio" %}selected{% endif %}>Frio</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-end mt-3">
                     <button type="submit" class="btn btn-dark me-2"><i class="bi bi-search me-2"></i>Filtrar</button>

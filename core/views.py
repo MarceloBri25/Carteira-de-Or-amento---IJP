@@ -10,7 +10,7 @@ from django import forms
 from .models import User, Orcamento, Cliente, Especificador, JornadaClienteHistorico
 import pandas as pd
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Case, When, Value
 import io
 from datetime import datetime
 from django.db import models
@@ -200,6 +200,7 @@ def user_activate_view(request, pk):
 
 @login_required
 def consultor_dashboard(request):
+    # Base queryset for the logged-in user
     orcamentos = Orcamento.objects.filter(usuario=request.user)
 
     # Get filter parameters
@@ -207,6 +208,7 @@ def consultor_dashboard(request):
     selected_cliente = request.GET.get('cliente')
     selected_especificador = request.GET.get('especificador')
     selected_semanas = request.GET.getlist('semana')
+    selected_status = request.GET.get('status')
 
     # Apply filters
     if selected_month:
@@ -217,6 +219,19 @@ def consultor_dashboard(request):
         orcamentos = orcamentos.filter(especificador__id=selected_especificador)
     if selected_semanas:
         orcamentos = orcamentos.filter(semana_previsao_fechamento__in=selected_semanas)
+    if selected_status:
+        orcamentos = orcamentos.filter(termometro=selected_status)
+
+    # Custom ordering
+    orcamentos = orcamentos.annotate(
+        status_order=Case(
+            When(termometro='Quente', then=Value(1)),
+            When(termometro='Morno', then=Value(2)),
+            When(termometro='Frio', then=Value(3)),
+            default=Value(4),
+            output_field=models.IntegerField()
+        )
+    ).order_by('status_order')
 
     # Get filter options
     available_months = Orcamento.objects.filter(usuario=request.user).dates('data_previsao_fechamento', 'month', order='ASC')
@@ -232,6 +247,7 @@ def consultor_dashboard(request):
         'selected_cliente': selected_cliente,
         'selected_especificador': selected_especificador,
         'selected_semanas': selected_semanas,
+        'selected_status': selected_status,
     }
     return render(request, 'consultor_dashboard.html', context)
 
