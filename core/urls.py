@@ -38,6 +38,7 @@ urlpatterns = [
     path('consultor/meus-clientes/', meus_clientes_view, name='meus_clientes_consultor'),
     path('administrador/meus-clientes/', meus_clientes_view, name='meus_clientes_administrador'),
     path('gerente/todos-orcamentos/', todos_orcamentos_view, name='todos_orcamentos_gerente'),
+    path('consultor/todos-orcamentos/', todos_orcamentos_view, name='consultor_todos_orcamentos'),
     path('administrador/todos-orcamentos/', todos_orcamentos_view, name='todos_orcamentos_administrador'),
     path('orcamento/<int:pk>/marcar_como_ganho/', marcar_como_ganho, name='marcar_como_ganho'),
     path('consultor/orcamentos-fechados-ganhos/', consultor_orcamentos_fechados_ganhos, name='consultor_orcamentos_fechados_ganhos'),

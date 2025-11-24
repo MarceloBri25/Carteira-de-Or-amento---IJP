@@ -2,36 +2,70 @@
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{# Optional: Add Bootstrap Icons CSS if not already included in home.html for better icon support #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<div class="container mt-5">
+<div class="container mt-5 mb-5"> {# Added margin-bottom for better spacing #}
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">Criar Novo Orçamento</h5>
+        <div class="col-lg-10"> {# Increased column width for more space #}
+            <div class="card shadow-lg border-0"> {# Added shadow and border styling #}
+                <div class="card-header bg-dark text-white py-3"> {# Enhanced header styling #}
+                    <h4 class="card-title mb-0"><i class="bi bi-file-earmark-plus me-2"></i> Criar Novo Orçamento</h4> {# Changed to h4 for better hierarchy and added icon #}
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4"> {# Added padding #}
                     <form method="post" action="{% url 'consultor_criar_orcamento' %}">
                         {% csrf_token %}
                         {{ form.non_field_errors }}
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="data_solicitacao" class="form-label">Data de Solicitação</label>
+
+                        <h5 class="mb-3 text-dark border-bottom pb-2">Informações Gerais</h5> {# New section title with border #}
+                        <div class="row g-3 mb-4"> {# Used g-3 for consistent gutter #}
+                            <div class="col-md-4">
+                                <label for="data_solicitacao" class="form-label">Data de Solicitação <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control {% if form.data_solicitacao.errors %}is-invalid{% endif %}" id="data_solicitacao" name="data_solicitacao" value="{{ form.data_solicitacao.value|default_if_none:'' }}" required>
                                 {% for error in form.data_solicitacao.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-8">
+                                <label for="numero_orcamento" class="form-label">Número do Orçamento <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control {% if form.numero_orcamento.errors %}is-invalid{% endif %}" id="numero_orcamento" name="numero_orcamento" value="{{ form.numero_orcamento.value|default_if_none:'' }}" required>
+                                {% for error in form.numero_orcamento.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3 text-dark border-bottom pb-2">Cliente e Especificador</h5> {# New section title with border #}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="nome_cliente" class="form-label">Nome do Cliente <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <select id="nome_cliente" name="nome_cliente" class="form-select {% if form.nome_cliente.errors %}is-invalid{% endif %}" required>
+                                        <option value="" selected>Selecione ou adicione um cliente...</option>
+                                        {% for cliente in clientes %}
+                                            <option value="{{ cliente.id }}" {% if form.nome_cliente.value == cliente.id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#addClienteModal" id="add-cliente-btn" title="Adicionar Novo Cliente">
+                                        <i class="bi bi-person-plus-fill"></i>
+                                    </button> {# Changed button style and added icon #}
+                                </div>
+                                {% for error in form.nome_cliente.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
                                 <label for="especificador" class="form-label">Especificador (Arquiteto)</label>
                                 <div class="input-group">
-                                    <select id="especificador" name="especificador" class="{% if form.especificador.errors %}is-invalid{% endif %}" required>
-                                        <option value="" selected>Selecione...</option>
+                                    <select id="especificador" name="especificador" class="form-select {% if form.especificador.errors %}is-invalid{% endif %}">
+                                        <option value="" selected>Selecione ou adicione um especificador...</option>
                                         {% for especificador in especificadores %}
                                             <option value="{{ especificador.id }}" {% if form.especificador.value == especificador.id %}selected{% endif %}>{{ especificador.nome_completo }}</option>
                                         {% endfor %}
                                     </select>
-                                    <button class="btn btn-outline-secondary" type="button" id="add-especificador-btn">+</button>
+                                    <button class="btn btn-info text-white" type="button" id="add-especificador-btn" title="Adicionar Novo Especificador">
+                                        <i class="bi bi-person-plus"></i>
+                                    </button> {# Changed button style and added icon #}
                                 </div>
                                 {% for error in form.especificador.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
@@ -42,8 +76,12 @@
                                     <button class="btn btn-secondary" type="button">Cancelar</button>
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="categoria" class="form-label">Categoria</label>
+                        </div>
+
+                        <h5 class="mb-3 text-dark border-bottom pb-2">Detalhes do Orçamento</h5> {# New section title with border #}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="categoria" class="form-label">Categoria <span class="text-danger">*</span></label>
                                 <select class="form-select {% if form.categoria.errors %}is-invalid{% endif %}" id="categoria" name="categoria" required>
                                     {% for value, name in category_choices %}
                                         <option value="{{ value }}" {% if form.categoria.value == value %}selected{% endif %}>{{ name }}</option>
@@ -53,49 +91,27 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="nome_cliente" class="form-label">Nome do Cliente</label>
-                                <div class="input-group">
-                                    <select id="nome_cliente" name="nome_cliente" class="{% if form.nome_cliente.errors %}is-invalid{% endif %}" required>
-                                        <option value="" selected>Selecione...</option>
-                                        {% for cliente in clientes %}
-                                            <option value="{{ cliente.id }}" {% if form.nome_cliente.value == cliente.id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#addClienteModal" id="add-cliente-btn">+</button>
-                                </div>
-                                {% for error in form.nome_cliente.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="numero_orcamento" class="form-label">Número do Orçamento</label>
-                                <input type="text" class="form-control {% if form.numero_orcamento.errors %}is-invalid{% endif %}" id="numero_orcamento" name="numero_orcamento" value="{{ form.numero_orcamento.value|default_if_none:'' }}" required>
-                                {% for error in form.numero_orcamento.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="data_envio" class="form-label">Data do Envio do Orçamento</label>
+                            <div class="col-md-4">
+                                <label for="data_envio" class="form-label">Data do Envio</label>
                                 <input type="date" class="form-control {% if form.data_envio.errors %}is-invalid{% endif %}" id="data_envio" name="data_envio" value="{{ form.data_envio.value|default_if_none:'' }}">
                                 {% for error in form.data_envio.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="valor_orcamento_display" class="form-label">Valor do Orçamento (R$)</label>
+                            <div class="col-md-4">
+                                <label for="valor_orcamento_display" class="form-label">Valor do Orçamento (R$) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control {% if form.valor_orcamento.errors %}is-invalid{% endif %}" id="valor_orcamento_display" name="valor_orcamento_display" value="{{ form.valor_orcamento.value|default_if_none:'' }}" required>
                                 <input type="hidden" id="valor_orcamento" name="valor_orcamento" value="{{ form.valor_orcamento.value|default_if_none:'' }}">
                                 {% for error in form.valor_orcamento.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="termometro" class="form-label">Termômetro</label>
+                        </div>
+
+                        <h5 class="mb-3 text-dark border-bottom pb-2">Status e Previsões</h5> {# New section title with border #}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="termometro" class="form-label">Termômetro <span class="text-danger">*</span></label>
                                 <select class="form-select {% if form.termometro.errors %}is-invalid{% endif %}" id="termometro" name="termometro" required>
                                     {% for value, name in thermometer_choices %}
                                         <option value="{{ value }}" {% if form.termometro.value == value %}selected{% endif %}>{{ name }}</option>
@@ -105,18 +121,30 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4">
+                                <label for="etapa" class="form-label">Etapa <span class="text-danger">*</span></label>
+                                <select class="form-select {% if form.etapa.errors %}is-invalid{% endif %}" id="etapa" name="etapa" required>
+                                    {% for value, name in stage_choices %}
+                                        <option value="{{ value }}" {% if form.etapa.value == value %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.etapa.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
                                 <label for="data_previsao_fechamento" class="form-label">Previsão de Fechamento</label>
                                 <input type="date" class="form-control {% if form.data_previsao_fechamento.errors %}is-invalid{% endif %}" id="data_previsao_fechamento" name="data_previsao_fechamento" value="{{ form.data_previsao_fechamento.value|default_if_none:'' }}">
                                 {% for error in form.data_previsao_fechamento.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                            <div class="col-md-6 mb-3">
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
                                 <label for="semana_previsao_fechamento" class="form-label">Semana da Previsão</label>
                                 <select class="form-select {% if form.semana_previsao_fechamento.errors %}is-invalid{% endif %}" id="semana_previsao_fechamento" name="semana_previsao_fechamento">
+                                    <option value="">Selecione a semana</option> {# Added empty option #}
                                     <option value="Semana 1" {% if form.semana_previsao_fechamento.value == "Semana 1" %}selected{% endif %}>Semana 1</option>
                                     <option value="Semana 2" {% if form.semana_previsao_fechamento.value == "Semana 2" %}selected{% endif %}>Semana 2</option>
                                     <option value="Semana 3" {% if form.semana_previsao_fechamento.value == "Semana 3" %}selected{% endif %}>Semana 3</option>
@@ -127,20 +155,7 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="etapa" class="form-label">Etapa</label>
-                                <select class="form-select {% if form.etapa.errors %}is-invalid{% endif %}" id="etapa" name="etapa" required>
-                                    {% for value, name in stage_choices %}
-                                        <option value="{{ value }}" {% if form.etapa.value == value %}selected{% endif %}>{{ name }}</option>
-                                    {% endfor %}
-                                </select>
-                                {% for error in form.etapa.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <label for="data_fechada_ganha" class="form-label">Data Fechada e Ganha</label>
                                 <input type="date" class="form-control {% if form.data_fechada_ganha.errors %}is-invalid{% endif %}" id="data_fechada_ganha" name="data_fechada_ganha" value="{{ form.data_fechada_ganha.value|default_if_none:'' }}">
                                 {% for error in form.data_fechada_ganha.errors %}
@@ -148,16 +163,19 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="mb-3">
+
+                        <h5 class="mb-3 text-dark border-bottom pb-2">Observações da Jornada do Cliente</h5> {# New section title with border #}
+                        <div class="mb-4">
                             <label for="jornada_cliente" class="form-label">Jornada do Cliente (Observações)</label>
-                            <textarea class="form-control {% if form.jornada_cliente.errors %}is-invalid{% endif %}" id="jornada_cliente" name="jornada_cliente" rows="3">{{ form.jornada_cliente.value|default_if_none:'' }}</textarea>
+                            <textarea class="form-control {% if form.jornada_cliente.errors %}is-invalid{% endif %}" id="jornada_cliente" name="jornada_cliente" rows="4">{{ form.jornada_cliente.value|default_if_none:'' }}</textarea> {# Increased rows #}
                             {% for error in form.jornada_cliente.errors %}
                                 <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        <div class="card-footer text-end">
-                            <a href="{% url 'consultor_dashboard' %}" class="btn btn-secondary">Cancelar</a>
-                            <button type="submit" class="btn btn-primary">Salvar Orçamento</button>
+
+                        <div class="card-footer bg-light border-top text-end p-3"> {# Enhanced footer styling #}
+                            <a href="{% url 'consultor_dashboard' %}" class="btn btn-secondary me-2"><i class="bi bi-x-circle me-1"></i> Cancelar</a> {# Added icon #}
+                            <button type="submit" class="btn btn-dark"><i class="bi bi-save me-1"></i> Salvar Orçamento</button> {# Added icon #}
                         </div>
                     </form>
                 </div>
@@ -166,6 +184,7 @@
     </div>
 </div>
 
+<!-- All modals and scripts remain unchanged -->
 <!-- Modal para Adicionar Cliente -->
 <div class="modal fade" id="addClienteModal" tabindex="-1" aria-labelledby="addClienteModalLabel" aria-hidden="true">
     <div class="modal-dialog">

@@ -4,8 +4,12 @@
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+{# Font Awesome for thermometer icons if not already included in home.html #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<div class="container mt-5">
+
+<div class="container mt-5 mb-5">
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-success" role="alert">
@@ -16,25 +20,25 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2>Bem-vindo à sua Carteira IJP, {{ user.first_name|default:user.username }}!</h2>
-            <p class="lead">Gerencie seus orçamentos de forma simples e eficiente.</p>
+            <h2 class="text-dark">Bem-vindo a Umbrella System, <span class="text-secondary">{{ user.first_name|default:user.username }}</span>!</h2>
+            <p class="lead text-muted">Gerencie seus orçamentos de forma simples e eficiente.</p>
         </div>
         <div>
-            <button type="button" class="btn btn-outline-secondary btn-md me-2" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                <i class="fas fa-filter"></i> Filtros
+            <button type="button" class="btn btn-outline-dark btn-md me-2" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="bi bi-filter me-2"></i> Filtros
             </button>
-            <a href="{% url 'consultor_criar_orcamento' %}" class="btn btn-primary btn-md">
-                <i class="fas fa-plus me-2"></i> Novo Orçamento
+            <a href="{% url 'consultor_criar_orcamento' %}" class="btn btn-dark btn-md">
+                <i class="bi bi-plus-circle me-2"></i> Novo Orçamento
             </a>
         </div>
     </div>
 
     <div class="collapse mb-4" id="filterCollapse">
-        <div class="card card-body"> <!-- Removed bg-dark -->
+        <div class="card card-body shadow-sm border-0">
             <form method="get" action="{% url 'consultor_dashboard' %}">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="filter-month" class="form-label">Mês de Previsão de Fechamento</label>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="filter-month" class="form-label text-dark">Mês de Previsão de Fechamento</label>
                         <select class="form-select" id="filter-month" name="month">
                             <option value="">Todos</option>
                             {% for month in available_months %}
@@ -42,26 +46,26 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="filter-cliente" class="form-label">Cliente</label>
-                        <select id="filter-cliente" name="cliente">
+                    <div class="col-md-3">
+                        <label for="filter-cliente" class="form-label text-dark">Cliente</label>
+                        <select id="filter-cliente" name="cliente" class="form-control">
                             <option value="">Todos</option>
                             {% for cliente in all_clientes %}
                                 <option value="{{ cliente.id }}" {% if selected_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome_completo }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="filter-especificador" class="form-label">Especificador</label>
-                        <select id="filter-especificador" name="especificador">
+                    <div class="col-md-3">
+                        <label for="filter-especificador" class="form-label text-dark">Especificador</label>
+                        <select id="filter-especificador" name="especificador" class="form-control">
                             <option value="">Todos</option>
                             {% for especificador in all_especificadores %}
                                 <option value="{{ especificador.id }}" {% if selected_especificador == especificador.id|stringformat:"s" %}selected{% endif %}>{{ especificador.nome_completo }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="filter-semana" class="form-label">Semana de Fechamento</label>
+                    <div class="col-md-3">
+                        <label for="filter-semana" class="form-label text-dark">Semana de Fechamento</label>
                         <select class="form-select" id="filter-semana" name="semana" multiple>
                             <option value="Semana 1" {% if "Semana 1" in selected_semanas %}selected{% endif %}>Semana 1</option>
                             <option value="Semana 2" {% if "Semana 2" in selected_semanas %}selected{% endif %}>Semana 2</option>
@@ -71,80 +75,94 @@
                         </select>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Filtrar</button>
-                <a href="{% url 'consultor_dashboard' %}" class="btn btn-secondary">Limpar</a>
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-dark me-2"><i class="bi bi-search me-2"></i>Filtrar</button>
+                    <a href="{% url 'consultor_dashboard' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-2"></i>Limpar</a>
+                </div>
             </form>
         </div>
     </div>
 
+    <h3 class="mb-4 text-dark border-bottom pb-2">Seus Orçamentos</h3>
 
-    <div class="card">
-        <div class="card-header">
-            Seus Orçamentos Recentes
-        </div>
-        <div class="card-body">
-            {% if orcamentos %}
-                <div class="table-responsive">
-                    <table class="table table-striped"> <!-- Removed table-dark -->
-                        <thead>
-                            <tr>
-                                <th>Nº Orçamento</th>
-                                <th>Cliente</th>
-                                <th>Especificador</th>
-                                <th>Valor</th>
-                                <th>Etapa</th>
-                                <th>Termômetro</th>
-                                <th>Previsão de Fechamento</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for orcamento in orcamentos %}
-                                <tr>
-                                    <td>{{ orcamento.numero_orcamento }}</td>
-                                    <td>{{ orcamento.nome_cliente.nome_completo }}</td>
-                                    <td>{{ orcamento.especificador.nome_completo }}</td>
-                                    <td>R$ {{ orcamento.valor_orcamento|br_format }}</td>
-                                    <td>{{ orcamento.etapa }}</td>
-                                    <td>
+    {% if orcamentos %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"> {# Grid for cards #}
+            {% for orcamento in orcamentos %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0 {% if orcamento.etapa == 'Fechada e Ganha' %}bg-light border-success{% elif orcamento.etapa == 'Perdida' %}bg-light border-danger{% endif %}">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+                            <h5 class="mb-0 text-white"><i class="bi bi-receipt me-2"></i> {{ orcamento.numero_orcamento }}</h5>
+                            <span class="badge bg-secondary">{{ orcamento.etapa }}</span>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">Cliente: <span class="text-dark">{{ orcamento.nome_cliente.nome_completo }}</span></h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Especificador: <span class="text-dark">{{ orcamento.especificador.nome_completo|default:"N/A" }}</span></h6>
+                            <p class="card-text fs-4 text-success mb-3">R$ {{ orcamento.valor_orcamento|br_format }}</p>
+
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span class="text-muted"><i class="bi bi-funnel me-2"></i> Categoria:</span>
+                                    <span class="fw-bold text-dark">{{ orcamento.categoria }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span class="text-muted"><i class="bi bi-thermometer-half me-2"></i> Termômetro:</span>
+                                    <span class="fw-bold text-dark">
                                         {% if orcamento.termometro == 'Quente' %}
-                                            <i class="fas fa-fire text-danger"></i>
+                                            <i class="fas fa-fire text-danger me-1"></i>
                                         {% elif orcamento.termometro == 'Morno' %}
-                                            <i class="fas fa-thermometer-half text-warning"></i>
+                                            <i class="fas fa-thermometer-half text-warning me-1"></i>
                                         {% else %}
-                                            <i class="fas fa-snowflake text-info"></i>
+                                            <i class="fas fa-snowflake text-info me-1"></i>
                                         {% endif %}
                                         {{ orcamento.termometro }}
-                                    </td>
-                                    <td>{{ orcamento.data_previsao_fechamento|date:"d/m/Y" }}</td>
-                                    <td>
-                                        <a href="{% url 'edit_orcamento' orcamento.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                                        {% if orcamento.etapa != 'Fechada e Ganha' %}
-                                            <form action="{% url 'marcar_como_ganho' orcamento.pk %}" method="post" style="display:inline;" class="marcar-ganho-form">
-                                                {% csrf_token %}
-                                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#confirmMarcarComoGanhoModal" title="Marcar como Ganho">✓</button>
-                                            </form>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span class="text-muted"><i class="bi bi-calendar-check me-2"></i> Previsão:</span>
+                                    <span class="fw-bold text-dark">{{ orcamento.data_previsao_fechamento|date:"d/m/Y"|default:"N/A" }}</span>
+                                </li>
+                                {% if orcamento.etapa == 'Fechada e Ganha' %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-success text-white">
+                                    <span class="text-white"><i class="bi bi-calendar-fill me-2"></i> Data Ganho:</span>
+                                    <span class="fw-bold text-white">{{ orcamento.data_fechada_ganha|date:"d/m/Y"|default:"N/A" }}</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="card-footer d-flex justify-content-end p-3">
+                            <a href="{% url 'edit_orcamento' orcamento.pk %}" class="btn btn-sm btn-outline-dark me-2">
+                                <i class="bi bi-pencil-square me-1"></i> Editar
+                            </a>
+                            {% if orcamento.etapa != 'Fechada e Ganha' and orcamento.etapa != 'Perdida' %}
+                                <form action="{% url 'marcar_como_ganho' orcamento.pk %}" method="post" style="display:inline;" class="marcar-ganho-form">
+                                    {% csrf_token %}
+                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#confirmMarcarComoGanhoModal" title="Marcar como Ganho">
+                                        <i class="bi bi-trophy me-1"></i> Marcar como Ganho
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            {% else %}
-                <p>Nenhum orçamento cadastrado ainda.</p>
-            {% endif %}
+            {% endfor %}
         </div>
-    </div>
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            <h4 class="alert-heading">Nenhum orçamento encontrado!</h4>
+            <p>Parece que você ainda não tem orçamentos para exibir com os filtros atuais.</p>
+            <hr>
+            <p class="mb-0">Que tal criar um <a href="{% url 'consultor_criar_orcamento' %}" class="alert-link">novo orçamento</a>?</p>
+        </div>
+    {% endif %}
 </div>
 
 <!-- Modal de Confirmação para Marcar como Ganho -->
 <div class="modal fade" id="confirmMarcarComoGanhoModal" tabindex="-1" aria-labelledby="confirmMarcarComoGanhoModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title" id="confirmMarcarComoGanhoModalLabel">Confirmar Ação</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 Tem certeza de que deseja marcar este orçamento como "Fechada e Ganha"?
@@ -157,7 +175,7 @@
     </div>
 </div>
 
-<!-- Modal para Adicionar Cliente -->
+<!-- Modal para Adicionar Cliente (Se mantido no dashboard por algum motivo) -->
 <div class="modal fade" id="addClienteModal" tabindex="-1" aria-labelledby="addClienteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

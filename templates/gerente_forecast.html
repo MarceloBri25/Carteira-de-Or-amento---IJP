@@ -15,48 +15,47 @@
                     <h5 class="mb-0">Orçamentos Elegíveis</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Filtros -->
+                    <!-- Filtros para Elegíveis -->
                     <div class="d-flex justify-content-end mb-3">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapseEligiveis" aria-expanded="false" aria-controls="filterCollapseEligiveis">
                             <i class="fas fa-filter me-2"></i>Filtros
                         </button>
                     </div>
-                    <div class="collapse mb-4" id="filterCollapse">
+                    <div class="collapse mb-4" id="filterCollapseEligiveis">
                         <div class="card card-body">
                             <form method="get" action="{% url 'gerente_forecast' %}">
-                                {% csrf_token %}
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label for="year-filter" class="form-label">Ano</label>
-                                        <select name="year" id="year-filter" class="form-select">
+                                        <label for="year-filter-eligiveis" class="form-label">Ano</label>
+                                        <select name="year" id="year-filter-eligiveis" class="form-select">
                                             <option value="">Todos</option>
-                                            {% for year in available_years %}<option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year }}</option>{% endfor %}
+                                            {% for year in available_years %}<option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>{% endfor %}
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="month-filter" class="form-label">Mês</label>
-                                        <select name="month" id="month-filter" class="form-select">
+                                        <label for="month-filter-eligiveis" class="form-label">Mês (Previsão)</label>
+                                        <select name="month" id="month-filter-eligiveis" class="form-select">
                                             <option value="">Todos</option>
-                                            {% for month_num, month_name in months_choices.items %}<option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>{% endfor %}
+                                            {% for month_num, month_name in months_choices.items %}<option value="{{ month_num }}" {% if month_num|add:"0" == selected_month %}selected{% endif %}>{{ month_name }}</option>{% endfor %}
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="etapa-filter" class="form-label">Etapa</label>
-                                        <select name="etapa" id="etapa-filter" class="form-select">
+                                        <label for="etapa-filter-eligiveis" class="form-label">Etapa</label>
+                                        <select name="etapa" id="etapa-filter-eligiveis" class="form-select">
                                             <option value="">Todas</option>
                                             {% for stage in stage_choices %}<option value="{{ stage.0 }}" {% if stage.0 == selected_etapa %}selected{% endif %}>{{ stage.1 }}</option>{% endfor %}
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="termometro-filter" class="form-label">Status</label>
-                                        <select name="termometro" id="termometro-filter" class="form-select">
+                                        <label for="termometro-filter-eligiveis" class="form-label">Status</label>
+                                        <select name="termometro" id="termometro-filter-eligiveis" class="form-select">
                                             <option value="">Todos</option>
                                             {% for status in thermometer_choices %}<option value="{{ status.0 }}" {% if status.0 == selected_termometro %}selected{% endif %}>{{ status.1 }}</option>{% endfor %}
                                         </select>
                                     </div>
                                 </div>
                                 <div class="row mt-3">
-                                    <div class="col-md-12">
+                                    <div class="col-md-12 text-end">
                                         <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
                                         <a href="{% url 'gerente_forecast' %}" class="btn btn-secondary btn-sm">Limpar</a>
                                     </div>
@@ -87,7 +86,7 @@
                                 </button>
                             </div>
                         {% empty %}
-                            <p class="text-center text-muted">Nenhum orçamento elegível encontrado.</p>
+                            <p class="text-center text-muted mt-3">Nenhum orçamento elegível encontrado com os filtros aplicados.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -97,10 +96,59 @@
         <!-- Coluna de Orçamentos no Forecast -->
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Forecast da Semana</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Filtros para Forecast -->
+                    <div class="d-flex justify-content-end mb-3">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapseForecast" aria-expanded="false" aria-controls="filterCollapseForecast">
+                            <i class="fas fa-filter me-2"></i>Filtros
+                        </button>
+                    </div>
+                    <div class="collapse mb-4" id="filterCollapseForecast">
+                        <div class="card card-body">
+                            <form method="get" action="{% url 'gerente_forecast' %}">
+                                <div class="row g-3">
+                                     <div class="col-md-6">
+                                        <label for="year-filter-forecast" class="form-label">Ano</label>
+                                        <select name="year" id="year-filter-forecast" class="form-select">
+                                            <option value="">Todos</option>
+                                            {% for year in available_years %}<option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="month-filter-forecast" class="form-label">Mês (Previsão)</label>
+                                        <select name="month" id="month-filter-forecast" class="form-select">
+                                            <option value="">Todos</option>
+                                            {% for month_num, month_name in months_choices.items %}<option value="{{ month_num }}" {% if month_num|add:"0" == selected_month %}selected{% endif %}>{{ month_name }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="etapa-filter-forecast" class="form-label">Etapa</label>
+                                        <select name="etapa" id="etapa-filter-forecast" class="form-select">
+                                            <option value="">Todas</option>
+                                            {% for stage in stage_choices %}<option value="{{ stage.0 }}" {% if stage.0 == selected_etapa %}selected{% endif %}>{{ stage.1 }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="termometro-filter-forecast" class="form-label">Status</label>
+                                        <select name="termometro" id="termometro-filter-forecast" class="form-select">
+                                            <option value="">Todos</option>
+                                            {% for status in thermometer_choices %}<option value="{{ status.0 }}" {% if status.0 == selected_termometro %}selected{% endif %}>{{ status.1 }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12 text-end">
+                                        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+                                        <a href="{% url 'gerente_forecast' %}" class="btn btn-secondary btn-sm">Limpar</a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <hr>
                     <div class="row text-center mb-3">
                         <div class="col-6">
                             <div class="stat-card">
@@ -137,6 +185,8 @@
                                     <i class="fas fa-arrow-left"></i>
                                 </button>
                             </div>
+                        {% empty %}
+                            <p class="text-center text-muted mt-3">Nenhum orçamento em forecast com os filtros aplicados.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -154,7 +204,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const forecastTotalValueEl = document.getElementById('forecast-total-value');
     const forecastTotalCountEl = document.getElementById('forecast-total-count');
     const updateUrl = "{% url 'update_forecast_status' %}";
-    const csrftoken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    // CSRF token pode ser obtido de uma meta tag ou input, se não houver formulário principal
+    const csrftoken = '{{ csrf_token }}';
 
     function formatCurrency(value) {
         return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

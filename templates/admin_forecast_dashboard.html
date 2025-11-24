@@ -178,7 +178,7 @@
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); }
     ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
-.kanban-card.bg-success-subtle {
+    .kanban-card.bg-success-subtle {
         background: rgba(0, 255, 0, 0.1);
         border-left: 4px solid #00ff00;
     }
@@ -220,6 +220,28 @@
                 <span class="text-secondary-dark">Visão geral das lojas</span>
             </div>
             <div class="d-flex align-items-center gap-4">
+                <form method="get" action="{% url 'admin_forecast_dashboard' %}" class="d-flex align-items-center gap-2">
+                    <select name="year" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        <option value="">Ano</option>
+                        {% for year in available_years %}
+                            <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="month" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        <option value="">Mês</option>
+                        {% for month_num, month_name in months_choices.items %}
+                            <option value="{{ month_num }}" {% if selected_month == month_num|add:"0" %}selected{% endif %}>{{ month_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="week" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        <option value="">Semana</option>
+                        {% for week in available_weeks %}
+                             <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>{{ week }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-light">Filtrar</button>
+                    <a href="{% url 'admin_forecast_dashboard' %}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+                </form>
                 <div class="text-end">
                     <h6 class="text-secondary-dark mb-0" style="font-size: 0.9rem;">Valor Total em Forecast</h6>
                     <h4 class="mb-0 text-light">R$ {{ grand_total_forecast|br_format }}</h4>
@@ -429,35 +451,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (result.status === 'success') {
                 bootstrap.Modal.getInstance(orcamentoEditModal).hide();
                 
-                const updatedOrcamento = result.updated_data;
-                const etapaDisplayElement = clickedCardElement.querySelector('[title="Etapa"]');
-
-                if (updatedOrcamento.etapa === 'Fechada e Ganha') {
-                    clickedCardElement.classList.add('bg-success-subtle');
-                } else {
-                    clickedCardElement.classList.remove('bg-success-subtle');
-                }
-
-                if (etapaDisplayElement) {
-                    etapaDisplayElement.innerHTML = `<i class="fas fa-info-circle fa-fw"></i> ${updatedOrcamento.etapa}`;
-                }
-                
-                clickedCardElement.querySelector('.card-value').textContent = `R$ ${parseFloat(updatedOrcamento.valor_orcamento).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-                clickedCardElement.querySelector('[title="Cliente"]').innerHTML = `<i class="fas fa-user fa-fw"></i> ${updatedOrcamento.nome_cliente_nome}`;
-                
-                const especifP = clickedCardElement.querySelector('[title="Especificador"]');
-                if (updatedOrcamento.especificador_nome) {
-                    if(especifP) {
-                        especifP.innerHTML = `<i class="fas fa-user-tie fa-fw"></i> ${updatedOrcamento.especificador_nome}`;
-                    } else {
-                        const newP = document.createElement('p');
-                        newP.title = "Especificador";
-                        newP.innerHTML = `<i class="fas fa-user-tie fa-fw"></i> ${updatedOrcamento.especificador_nome}`;
-                        clickedCardElement.querySelector('[title="Cliente"]').after(newP);
-                    }
-                } else if (especifP) {
-                    especifP.remove();
-                }
+                // Reload the page to reflect all changes, including re-calculation of totals
+                window.location.reload();
 
             } else {
                 alert('Erro ao salvar: ' + JSON.stringify(result.errors));

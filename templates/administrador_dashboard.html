@@ -195,38 +195,17 @@
 
     <!-- Gráficos Principais -->
     <div class="row">
+        <!-- START: Previsão de Fechamento por Semana (Swapped position) -->
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
-                <div class="card-header">Desempenho dos Consultores</div>
-                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                    <ul class="list-group list-group-flush">
-                        {% for consultant in consultant_performance %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5 class="mb-1">
-                                    {% if forloop.counter == 1 %}
-                                        <i class="fas fa-trophy text-warning"></i>
-                                    {% elif forloop.counter == 2 %}
-                                        <i class="fas fa-trophy text-secondary"></i>
-                                    {% elif forloop.counter == 3 %}
-                                        <i class="fas fa-trophy" style="color: #cd7f32;"></i>
-                                    {% else %}
-                                        <span class="text-muted">{{ forloop.counter }}º</span>
-                                    {% endif %}
-                                    {{ consultant.username }}
-                                </h5>
-                                <small class="text-muted">Total em Carteira: R$ {{ consultant.total_carteira|br_format }}</small>
-                            </div>
-                            <div class="text-end">
-                                <h6 class="mb-0">Vendido:</h6>
-                                <span class="font-weight-bold">R$ {{ consultant.total_vendido|br_format }}</span>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                <div class="card-header">Previsão de Fechamento por Semana</div>
+                <div class="card-body">
+                    <canvas id="weeklyForecastChart"></canvas>
                 </div>
             </div>
         </div>
+        <!-- END: Previsão de Fechamento por Semana -->
+
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header">Desempenho por Loja</div>
@@ -260,6 +239,41 @@
 
     <!-- Gráficos Secundários -->
     <div class="row">
+        <!-- START: Desempenho dos Consultores (Swapped position) -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Desempenho dos Consultores</div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for consultant in consultant_performance %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if forloop.counter == 1 %}
+                                        <i class="fas fa-trophy text-warning"></i>
+                                    {% elif forloop.counter == 2 %}
+                                        <i class="fas fa-trophy text-secondary"></i>
+                                    {% elif forloop.counter == 3 %}
+                                        <i class="fas fa-trophy" style="color: #cd7f32;"></i>
+                                    {% else %}
+                                        <span class="text-muted">{{ forloop.counter }}º</span>
+                                    {% endif %}
+                                    {{ consultant.username }}
+                                </h5>
+                                <small class="text-muted">Total em Carteira: R$ {{ consultant.total_carteira|br_format }}</small>
+                            </div>
+                            <div class="text-end">
+                                <h6 class="mb-0">Vendido:</h6>
+                                <span class="font-weight-bold">R$ {{ consultant.total_vendido|br_format }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <!-- END: Desempenho dos Consultores -->
+
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header">Ranking de Especificadores</div>
@@ -288,14 +302,6 @@
                         </li>
                         {% endfor %}
                     </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">Previsão de Fechamento por Semana</div>
-                <div class="card-body">
-                    <canvas id="weeklyForecastChart"></canvas>
                 </div>
             </div>
         </div>

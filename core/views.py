@@ -595,7 +595,10 @@ def todos_orcamentos_view(request):
     user = request.user
     base_orcamentos = Orcamento.objects.all()
 
-    if user.role == 'gerente':
+    if user.role == 'consultor':
+        base_orcamentos = base_orcamentos.filter(usuario=user)
+        todos_orcamentos_url_name = 'consultor_todos_orcamentos'
+    elif user.role == 'gerente':
         base_orcamentos = base_orcamentos.filter(usuario__loja=user.loja)
         todos_orcamentos_url_name = 'todos_orcamentos_gerente'
     elif user.role == 'administrador':
@@ -1215,38 +1218,48 @@ def gerente_forecast_view(request):
         messages.error(request, 'Você não está associado a nenhuma loja.')
         return redirect('home')
 
+    # Get filter parameters, with defaults for year and month
+    selected_year = request.GET.get('year', str(datetime.now().year))
+    selected_month = request.GET.get('month', str(datetime.now().month))
+    selected_especificador = request.GET.get('especificador')
+    selected_cliente = request.GET.get('cliente')
+    selected_etapa = request.GET.get('etapa')
+    selected_termometro = request.GET.get('termometro')
+
     # Base queryset for all budgets in the manager's store
     base_orcamentos = Orcamento.objects.filter(usuario__loja=gerente_loja)
 
-    # Budgets already in forecast (should not be filtered)
+    # Budgets already in forecast
     orcamentos_in_forecast = base_orcamentos.filter(is_forecast=True).order_by('-data_previsao_fechamento')
 
     # Eligible budgets that are NOT in forecast
     eligible_stages = ['Especificação', 'Follow-up', 'Em Negociação']
     orcamentos_elegiveis = base_orcamentos.filter(is_forecast=False, etapa__in=eligible_stages)
 
-    # Get filter parameters
-    selected_year = request.GET.get('year')
-    selected_month = request.GET.get('month')
-    selected_especificador = request.GET.get('especificador')
-    selected_cliente = request.GET.get('cliente')
-    selected_etapa = request.GET.get('etapa')
-    selected_termometro = request.GET.get('termometro')
+    # Apply common filters to both querysets
+    querysets_to_filter = {
+        'in_forecast': orcamentos_in_forecast,
+        'elegiveis': orcamentos_elegiveis
+    }
+    
+    for key, qs in querysets_to_filter.items():
+        if selected_year:
+            qs = qs.filter(data_previsao_fechamento__year=selected_year)
+        if selected_month:
+            qs = qs.filter(data_previsao_fechamento__month=selected_month)
+        if selected_especificador:
+            qs = qs.filter(especificador__id=selected_especificador)
+        if selected_cliente:
+            qs = qs.filter(nome_cliente__id=selected_cliente)
+        if selected_etapa:
+            qs = qs.filter(etapa=selected_etapa)
+        if selected_termometro:
+            qs = qs.filter(termometro=selected_termometro)
+        querysets_to_filter[key] = qs
 
-    # Apply filters to the eligible list
-    if selected_year:
-        orcamentos_elegiveis = orcamentos_elegiveis.filter(data_previsao_fechamento__year=selected_year)
-    if selected_month:
-        orcamentos_elegiveis = orcamentos_elegiveis.filter(data_previsao_fechamento__month=selected_month)
-    if selected_especificador:
-        orcamentos_elegiveis = orcamentos_elegiveis.filter(especificador__id=selected_especificador)
-    if selected_cliente:
-        orcamentos_elegiveis = orcamentos_elegiveis.filter(nome_cliente__id=selected_cliente)
-    if selected_etapa:
-        orcamentos_elegiveis = orcamentos_elegiveis.filter(etapa=selected_etapa)
-    if selected_termometro:
-        orcamentos_elegiveis = orcamentos_elegiveis.filter(termometro=selected_termometro)
-
+    orcamentos_in_forecast = querysets_to_filter['in_forecast']
+    orcamentos_elegiveis = querysets_to_filter['elegiveis']
+    
     # Get filter options from the base queryset to show all possibilities
     available_years = base_orcamentos.dates('data_previsao_fechamento', 'year', order='DESC')
     all_especificadores = Especificador.objects.filter(orcamento__in=base_orcamentos).distinct()
@@ -1268,8 +1281,8 @@ def gerente_forecast_view(request):
         'all_clientes': all_clientes,
         'stage_choices': stage_choices,
         'thermometer_choices': thermometer_choices,
-        'selected_year': selected_year,
-        'selected_month': selected_month,
+        'selected_year': int(selected_year) if selected_year else None,
+        'selected_month': int(selected_month) if selected_month else None,
         'selected_especificador': selected_especificador,
         'selected_cliente': selected_cliente,
         'selected_etapa': selected_etapa,
@@ -1283,69 +1296,66 @@ def admin_forecast_dashboard_view(request):
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('home')
 
+    # Get filter parameters from request
+    selected_year = request.GET.get('year', str(datetime.now().year))
+    selected_month = request.GET.get('month', str(datetime.now().month))
+    selected_week = request.GET.get('week')
+
     lojas = Loja.objects.all()
     dashboard_data = []
     grand_total_forecast = 0
 
-    for loja in lojas:
-        # Orçamentos em forecast para a carteira da loja
-        forecast_orcamentos = Orcamento.objects.filter(usuario__loja=loja, is_forecast=True).select_related('nome_cliente', 'especificador')
+    # Base queryset for all forecast budgets
+    base_forecast_orcamentos = Orcamento.objects.filter(is_forecast=True).select_related('nome_cliente', 'especificador')
 
-        # 1. Visão Geral da Carteira de Forecast
+    # Apply filters to the base queryset
+    if selected_year:
+        base_forecast_orcamentos = base_forecast_orcamentos.filter(data_previsao_fechamento__year=selected_year)
+    if selected_month:
+        base_forecast_orcamentos = base_forecast_orcamentos.filter(data_previsao_fechamento__month=selected_month)
+    if selected_week:
+        base_forecast_orcamentos = base_forecast_orcamentos.filter(semana_previsao_fechamento=selected_week)
+
+    for loja in lojas:
+        # Get the filtered forecast budgets for the specific store
+        forecast_orcamentos = base_forecast_orcamentos.filter(usuario__loja=loja)
+        
         valor_total_carteira = forecast_orcamentos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
         orcamentos_count = forecast_orcamentos.count()
         grand_total_forecast += valor_total_carteira
-
-        # 2. Total Fechado e Ganho (histórico da loja, não apenas forecast)
-        ganhos_loja = Orcamento.objects.filter(usuario__loja=loja, etapa='Fechada e Ganha')
-        total_fechado_ganho = ganhos_loja.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-        count_fechado_ganho = ganhos_loja.count()
-
-        # 3. Orçamentos por Temperatura (dentro do forecast)
-        quentes = forecast_orcamentos.filter(termometro='Quente')
-        quentes_valor = quentes.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-        quentes_count = quentes.count()
-
-        mornos = forecast_orcamentos.filter(termometro='Morno')
-        mornos_valor = mornos.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-        mornos_count = mornos.count()
-
-        frios = forecast_orcamentos.filter(termometro='Frio')
-        frios_valor = frios.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-        frios_count = frios.count()
-
-        # 4. Total de Orçamentos Perdidos (histórico da loja)
-        perdidos_loja = Orcamento.objects.filter(usuario__loja=loja, etapa='Perdida')
-        total_perdido = perdidos_loja.aggregate(Sum('valor_orcamento'))['valor_orcamento__sum'] or 0
-        count_perdido = perdidos_loja.count()
 
         dashboard_data.append({
             'loja_id': loja.id,
             'loja_nome': loja.nome,
             'valor_total_carteira': valor_total_carteira,
             'orcamentos_count': orcamentos_count,
-            'total_fechado_ganho': total_fechado_ganho,
-            'count_fechado_ganho': count_fechado_ganho,
-            'quentes_valor': quentes_valor,
-            'quentes_count': quentes_count,
-            'mornos_valor': mornos_valor,
-            'mornos_count': mornos_count,
-            'frios_valor': frios_valor,
-            'frios_count': frios_count,
-            'total_perdido': total_perdido,
-            'count_perdido': count_perdido,
-            'orcamentos': forecast_orcamentos, # Passando a lista de orçamentos
+            'orcamentos': forecast_orcamentos,
         })
 
-    # Análise de motivos de perda (geral, não por loja)
+    # Análise de motivos de perda (geral, não por loja e não filtrado por data do forecast)
     motivos_perda = Orcamento.objects.filter(etapa='Perdida').exclude(motivo_perda__isnull=True).exclude(motivo_perda__exact='').values('motivo_perda').annotate(
         count=Count('id')
     ).order_by('-count')
+
+    # Filter options
+    available_years = Orcamento.objects.filter(is_forecast=True).dates('data_previsao_fechamento', 'year', order='DESC')
+    months_choices = {
+        '1': 'Janeiro', '2': 'Fevereiro', '3': 'Março', '4': 'Abril',
+        '5': 'Maio', '6': 'Junho', '7': 'Julho', '8': 'Agosto',
+        '9': 'Setembro', '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
+    }
+    available_weeks = Orcamento.objects.filter(is_forecast=True).values_list('semana_previsao_fechamento', flat=True).distinct().order_by('semana_previsao_fechamento')
 
     context = {
         'dashboard_data': dashboard_data,
         'grand_total_forecast': grand_total_forecast,
         'motivos_perda': motivos_perda,
+        'available_years': [d.year for d in available_years],
+        'months_choices': months_choices,
+        'available_weeks': available_weeks,
+        'selected_year': int(selected_year) if selected_year else None,
+        'selected_month': int(selected_month) if selected_month else None,
+        'selected_week': selected_week,
     }
     return render(request, 'admin_forecast_dashboard.html', context)
 
