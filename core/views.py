@@ -200,8 +200,8 @@ def user_activate_view(request, pk):
 
 @login_required
 def consultor_dashboard(request):
-    # Base queryset for the logged-in user
-    orcamentos = Orcamento.objects.filter(usuario=request.user)
+    # Base queryset for the logged-in user, excluding 'Fechada e Ganha'
+    orcamentos = Orcamento.objects.filter(usuario=request.user).exclude(etapa='Fechada e Ganha')
 
     # Get filter parameters
     selected_month = request.GET.get('month')
