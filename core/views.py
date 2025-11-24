@@ -1218,48 +1218,48 @@ def gerente_forecast_view(request):
         messages.error(request, 'Você não está associado a nenhuma loja.')
         return redirect('home')
 
-    # Get filter parameters, with defaults for year and month
-    selected_year = request.GET.get('year', str(datetime.now().year))
-    selected_month = request.GET.get('month', str(datetime.now().month))
+    # Get filter parameters
+    source = request.GET.get('source')
+    selected_year = request.GET.get('year')
+    selected_month = request.GET.get('month')
     selected_especificador = request.GET.get('especificador')
     selected_cliente = request.GET.get('cliente')
     selected_etapa = request.GET.get('etapa')
     selected_termometro = request.GET.get('termometro')
 
-    # Base queryset for all budgets in the manager's store
+    # Base querysets
     base_orcamentos = Orcamento.objects.filter(usuario__loja=gerente_loja)
-
-    # Budgets already in forecast
     orcamentos_in_forecast = base_orcamentos.filter(is_forecast=True).order_by('-data_previsao_fechamento')
+    orcamentos_elegiveis = base_orcamentos.filter(is_forecast=False, etapa__in=['Especificação', 'Follow-up', 'Em Negociação'])
 
-    # Eligible budgets that are NOT in forecast
-    eligible_stages = ['Especificação', 'Follow-up', 'Em Negociação']
-    orcamentos_elegiveis = base_orcamentos.filter(is_forecast=False, etapa__in=eligible_stages)
-
-    # Apply common filters to both querysets
-    querysets_to_filter = {
-        'in_forecast': orcamentos_in_forecast,
-        'elegiveis': orcamentos_elegiveis
-    }
-    
-    for key, qs in querysets_to_filter.items():
+    # Apply filters based on the source
+    if source == 'elegiveis':
         if selected_year:
-            qs = qs.filter(data_previsao_fechamento__year=selected_year)
+            orcamentos_elegiveis = orcamentos_elegiveis.filter(data_previsao_fechamento__year=selected_year)
         if selected_month:
-            qs = qs.filter(data_previsao_fechamento__month=selected_month)
+            orcamentos_elegiveis = orcamentos_elegiveis.filter(data_previsao_fechamento__month=selected_month)
         if selected_especificador:
-            qs = qs.filter(especificador__id=selected_especificador)
+            orcamentos_elegiveis = orcamentos_elegiveis.filter(especificador__id=selected_especificador)
         if selected_cliente:
-            qs = qs.filter(nome_cliente__id=selected_cliente)
+            orcamentos_elegiveis = orcamentos_elegiveis.filter(nome_cliente__id=selected_cliente)
         if selected_etapa:
-            qs = qs.filter(etapa=selected_etapa)
+            orcamentos_elegiveis = orcamentos_elegiveis.filter(etapa=selected_etapa)
         if selected_termometro:
-            qs = qs.filter(termometro=selected_termometro)
-        querysets_to_filter[key] = qs
+            orcamentos_elegiveis = orcamentos_elegiveis.filter(termometro=selected_termometro)
+    elif source == 'forecast':
+        if selected_year:
+            orcamentos_in_forecast = orcamentos_in_forecast.filter(data_previsao_fechamento__year=selected_year)
+        if selected_month:
+            orcamentos_in_forecast = orcamentos_in_forecast.filter(data_previsao_fechamento__month=selected_month)
+        if selected_especificador:
+            orcamentos_in_forecast = orcamentos_in_forecast.filter(especificador__id=selected_especificador)
+        if selected_cliente:
+            orcamentos_in_forecast = orcamentos_in_forecast.filter(nome_cliente__id=selected_cliente)
+        if selected_etapa:
+            orcamentos_in_forecast = orcamentos_in_forecast.filter(etapa=selected_etapa)
+        if selected_termometro:
+            orcamentos_in_forecast = orcamentos_in_forecast.filter(termometro=selected_termometro)
 
-    orcamentos_in_forecast = querysets_to_filter['in_forecast']
-    orcamentos_elegiveis = querysets_to_filter['elegiveis']
-    
     # Get filter options from the base queryset to show all possibilities
     available_years = base_orcamentos.dates('data_previsao_fechamento', 'year', order='DESC')
     all_especificadores = Especificador.objects.filter(orcamento__in=base_orcamentos).distinct()

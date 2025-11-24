@@ -24,6 +24,7 @@
                     <div class="collapse mb-4" id="filterCollapseEligiveis">
                         <div class="card card-body">
                             <form method="get" action="{% url 'gerente_forecast' %}">
+                                <input type="hidden" name="source" value="elegiveis">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="year-filter-eligiveis" class="form-label">Ano</label>
@@ -109,6 +110,7 @@
                     <div class="collapse mb-4" id="filterCollapseForecast">
                         <div class="card card-body">
                             <form method="get" action="{% url 'gerente_forecast' %}">
+                                <input type="hidden" name="source" value="forecast">
                                 <div class="row g-3">
                                      <div class="col-md-6">
                                         <label for="year-filter-forecast" class="form-label">Ano</label>
