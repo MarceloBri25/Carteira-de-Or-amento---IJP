@@ -20,6 +20,11 @@ import json
 from django.forms.models import model_to_dict
 
 class UserRegistrationForm(forms.ModelForm):
+    """
+    Formulário para registro de novos usuários.
+    Inclui campos para nome de usuário, nome, sobrenome, email, função (role) e loja,
+    além de campos para senha e confirmação de senha.
+    """
     password = forms.CharField(label='Senha', widget=forms.PasswordInput)
     password2 = forms.CharField(label='Confirme a senha', widget=forms.PasswordInput)
 
@@ -54,11 +59,19 @@ class UserRegistrationForm(forms.ModelForm):
         return user
 
 class UserEditForm(forms.ModelForm):
+    """
+    Formulário para edição de informações de um usuário existente.
+    Permite alterar nome, sobrenome, email, função (role) e loja.
+    """
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'role', 'loja']
 
 class OrcamentoForm(forms.ModelForm):
+    """
+    Formulário base para criação e edição de orçamentos.
+    Exclui o campo 'usuario', que é preenchido automaticamente pela view.
+    """
     class Meta:
         model = Orcamento
         exclude = ['usuario']
@@ -68,6 +81,11 @@ class OrcamentoForm(forms.ModelForm):
         self.fields['motivo_perda'].required = False
 
 class OrcamentoAdminForm(forms.ModelForm):
+    """
+    Formulário administrativo para criação e edição de orçamentos.
+    Inclui todos os campos do modelo Orcamento, permitindo que administradores
+    selecionem o usuário associado ao orçamento.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['usuario'].widget.attrs.update({'class': 'form-select'})
@@ -77,27 +95,45 @@ class OrcamentoAdminForm(forms.ModelForm):
         fields = '__all__'
 
 class ClienteForm(forms.ModelForm):
+    """
+    Formulário para criação e edição de clientes.
+    Utilizado principalmente em contextos AJAX para adicionar clientes rapidamente.
+    """
     class Meta:
         model = Cliente
         fields = '__all__'
 
 class EspecificadorForm(forms.ModelForm):
+    """
+    Formulário para criação e edição de especificadores.
+    Utilizado em contextos AJAX e nas telas de gerenciamento de especificadores.
+    """
     class Meta:
         model = Especificador
         fields = '__all__'
 
 class JornadaClienteHistoricoForm(forms.ModelForm):
+    """
+    Formulário para adicionar um novo comentário ao histórico da jornada de um cliente.
+    """
     class Meta:
         model = JornadaClienteHistorico
         fields = ['comentario']
 
 class ClienteFullForm(forms.ModelForm):
+    """
+    Formulário completo para criação e edição de clientes, incluindo todos os campos.
+    """
     class Meta:
         model = Cliente
         fields = '__all__'
 
 @login_required
 def home_view(request):
+    """
+    Redireciona o usuário para o dashboard apropriado com base em seu papel (role).
+    Se o usuário não estiver autenticado, redireciona para a página de login.
+    """
     if request.user.is_authenticated:
         if request.user.role == 'consultor':
             return redirect('consultor_dashboard')
@@ -108,11 +144,18 @@ def home_view(request):
     return redirect('login')
 
 class LojasView(ListView):
+    """
+    View baseada em classe para listar todas as lojas cadastradas no sistema.
+    """
     model = Loja
     template_name = 'lojas.html'
     context_object_name = 'lojas'
 
 def register_user_view(request):
+    """
+    Permite o registro de novos usuários no sistema.
+    Processa o formulário de registro e exibe mensagens de sucesso ou erro.
+    """
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
@@ -128,10 +171,17 @@ def register_user_view(request):
     return render(request, 'register_user.html', {'form': form, 'lojas': lojas})
 
 def logout_view(request):
+    """
+    Desloga o usuário atual e o redireciona para a página de login.
+    """
     logout(request)
     return redirect('login')
 
 class UserListView(ListView):
+    """
+    View baseada em classe para listar todos os usuários cadastrados.
+    Organiza os usuários por loja e exibe aqueles sem loja associada.
+    """
     model = User
     template_name = 'user_list.html'
     context_object_name = 'users'
@@ -155,6 +205,10 @@ class UserListView(ListView):
         return context
 
 def user_edit_view(request, pk):
+    """
+    Permite a edição do perfil de um usuário existente e a alteração de sua senha
+    (apenas para administradores).
+    """
     user_to_edit = get_object_or_404(User, pk=pk)
     
     if request.method == 'POST':
@@ -187,12 +241,18 @@ def user_edit_view(request, pk):
     return render(request, 'user_edit.html', context)
 
 def user_deactivate_view(request, pk):
+    """
+    Desativa um usuário, tornando-o inativo no sistema.
+    """
     user = get_object_or_404(User, pk=pk)
     user.is_active = False
     user.save()
     return redirect('user_list')
 
 def user_activate_view(request, pk):
+    """
+    Ativa um usuário previamente desativado, tornando-o novamente ativo no sistema.
+    """
     user = get_object_or_404(User, pk=pk)
     user.is_active = True
     user.save()
@@ -200,6 +260,10 @@ def user_activate_view(request, pk):
 
 @login_required
 def consultor_dashboard(request):
+    """
+    Exibe o dashboard do consultor, mostrando orçamentos abertos e permitindo filtragem
+    por mês, cliente, especificador, semana e status (termômetro).
+    """
     # Base queryset for the logged-in user, excluding 'Fechada e Ganha'
     orcamentos = Orcamento.objects.filter(usuario=request.user).exclude(etapa='Fechada e Ganha')
 
@@ -253,6 +317,10 @@ def consultor_dashboard(request):
 
 @login_required
 def consultor_criar_orcamento(request):
+    """
+    Permite que um consultor crie um novo orçamento.
+    Processa o formulário de criação e associa o orçamento ao usuário logado.
+    """
     if request.method == 'POST':
         form = OrcamentoForm(request.POST)
         if form.is_valid():
@@ -281,6 +349,10 @@ def consultor_criar_orcamento(request):
 from django.http import JsonResponse
 
 def add_cliente(request):
+    """
+    Endpoint AJAX para adicionar um novo cliente rapidamente através de um formulário.
+    Retorna os dados do cliente em formato JSON.
+    """
     if request.method == 'POST':
         form = ClienteForm(request.POST)
         if form.is_valid():
@@ -289,6 +361,10 @@ def add_cliente(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 def add_especificador(request):
+    """
+    Endpoint AJAX para adicionar um novo especificador rapidamente através de um formulário.
+    Retorna os dados do especificador em formato JSON.
+    """
     if request.method == 'POST':
         form = EspecificadorForm(request.POST)
         if form.is_valid():
@@ -299,6 +375,10 @@ def add_especificador(request):
 
 @login_required
 def edit_orcamento(request, pk):
+    """
+    Permite a edição de um orçamento existente.
+    Carrega o orçamento pelo PK, processa o formulário de edição e salva as alterações.
+    """
     orcamento = get_object_or_404(Orcamento, pk=pk)
     if request.method == 'POST':
         form = OrcamentoForm(request.POST, instance=orcamento)
@@ -326,6 +406,11 @@ def edit_orcamento(request, pk):
 
 @login_required
 def gerente_dashboard(request):
+    """
+    Exibe o dashboard do gerente, com uma visão geral dos orçamentos da sua loja.
+    Inclui métricas do mês, desempenho dos consultores e previsão de fechamento semanal.
+    Permite filtrar por ano e mês.
+    """
     # Get the current manager's loja
     gerente_loja = request.user.loja
     if not gerente_loja:
@@ -471,6 +556,9 @@ def gerente_dashboard(request):
 
 @login_required
 def gerente_criar_orcamento(request):
+    """
+    Permite que um gerente crie um novo orçamento e o atribua a um consultor de sua loja.
+    """
     if request.method == 'POST':
         form = OrcamentoForm(request.POST)
         consultor_id = request.POST.get('consultor')
@@ -506,6 +594,10 @@ def gerente_criar_orcamento(request):
 
 @login_required
 def administrador_criar_orcamento(request):
+    """
+    Permite que um administrador crie um novo orçamento, atribuindo-o a qualquer usuário.
+    Utiliza um formulário de orçamento mais abrangente.
+    """
     if request.method == 'POST':
         form = OrcamentoAdminForm(request.POST)
         if form.is_valid():
@@ -532,6 +624,11 @@ def administrador_criar_orcamento(request):
 
 @login_required
 def meus_clientes_view(request):
+    """
+    Exibe a lista de orçamentos (tratados como "meus clientes") do usuário logado,
+    ou da loja (para gerentes), ou todos (para administradores).
+    Permite filtrar os orçamentos por diversos critérios.
+    """
     user = request.user
     if user.role == 'consultor':
         orcamentos = Orcamento.objects.filter(usuario=user)
@@ -608,6 +705,11 @@ def meus_clientes_view(request):
 
 @login_required
 def todos_orcamentos_view(request):
+    """
+    Exibe uma lista de todos os orçamentos (ou orçamentos da loja, ou do consultor),
+    com funcionalidades de filtragem avançadas por ano, mês, especificador, cliente,
+    etapa, termômetro, loja e consultor.
+    """
     user = request.user
     base_orcamentos = Orcamento.objects.all()
 
@@ -697,6 +799,10 @@ def todos_orcamentos_view(request):
 
 @login_required
 def marcar_como_ganho(request, pk):
+    """
+    Marca um orçamento específico como 'Fechada e Ganha' e registra a data da alteração.
+    Redireciona o usuário de volta para a página de onde veio.
+    """
     orcamento = get_object_or_404(Orcamento, pk=pk)
     orcamento.etapa = 'Fechada e Ganha'
     orcamento.data_fechada_ganha = timezone.now().date()
@@ -705,11 +811,18 @@ def marcar_como_ganho(request, pk):
 
 @login_required
 def consultor_orcamentos_fechados_ganhos(request):
+    """
+    Exibe uma lista dos orçamentos marcados como 'Fechada e Ganha' para o consultor logado.
+    """
     orcamentos = Orcamento.objects.filter(usuario=request.user, etapa='Fechada e Ganha')
     return render(request, 'consultor_orcamentos_fechados_ganhos.html', {'orcamentos': orcamentos})
 
 @login_required
 def reverter_orcamento_ganho(request, pk):
+    """
+    Reverte o status de um orçamento de 'Fechada e Ganha' para 'Follow-up'.
+    Redireciona o usuário de volta para a página de onde veio.
+    """
     orcamento = get_object_or_404(Orcamento, pk=pk)
     orcamento.etapa = 'Follow-up'
     orcamento.save()
@@ -720,6 +833,11 @@ from datetime import datetime
 
 @login_required
 def administrador_dashboard(request):
+    """
+    Exibe o dashboard do administrador, com uma visão abrangente de todos os orçamentos
+    e métricas de desempenho em todas as lojas. Permite filtragem por ano, mês e lojas.
+    Inclui análise de motivos de perda e ranking de especificadores.
+    """
     selected_year = request.GET.get('year', str(datetime.now().year))
     selected_month = request.GET.get('month', str(datetime.now().month))
     selected_lojas = request.GET.getlist('loja')
@@ -951,6 +1069,9 @@ def administrador_dashboard(request):
 
 @login_required
 def add_jornada_cliente_comment(request, pk):
+    """
+    Adiciona um novo comentário ao histórico de jornada de um orçamento específico.
+    """
     orcamento = get_object_or_404(Orcamento, pk=pk)
     if request.method == 'POST':
         form = JornadaClienteHistoricoForm(request.POST)
@@ -965,6 +1086,10 @@ def add_jornada_cliente_comment(request, pk):
 
 @login_required
 def add_cliente_full(request):
+    """
+    Permite adicionar um cliente completo através de um formulário.
+    Pode ser usado via requisição POST (AJAX) ou para renderizar a página do formulário.
+    """
     if request.method == 'POST':
         form = ClienteFullForm(request.POST)
         if form.is_valid():
@@ -978,6 +1103,10 @@ from django.core.paginator import Paginator
 
 @login_required
 def clientes_cadastrados(request):
+    """
+    Exibe uma lista paginada de todos os clientes cadastrados.
+    Permite a busca de clientes por nome completo.
+    """
     query = request.GET.get('q')
     if query:
         clientes_list = Cliente.objects.filter(nome_completo__icontains=query).order_by('nome_completo')
@@ -992,6 +1121,9 @@ def clientes_cadastrados(request):
 
 @login_required
 def cliente_add_view(request):
+    """
+    Permite adicionar um novo cliente através de um formulário completo.
+    """
     if request.method == 'POST':
         form = ClienteFullForm(request.POST)
         if form.is_valid():
@@ -1003,6 +1135,9 @@ def cliente_add_view(request):
 
 @login_required
 def cliente_edit_view(request, pk):
+    """
+    Permite editar as informações de um cliente existente.
+    """
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == 'POST':
         form = ClienteFullForm(request.POST, instance=cliente)
@@ -1015,6 +1150,10 @@ def cliente_edit_view(request, pk):
 
 @login_required
 def especificadores_cadastrados(request):
+    """
+    Exibe uma lista paginada de todos os especificadores cadastrados.
+    Permite a busca de especificadores por nome completo.
+    """
     query = request.GET.get('q')
     if query:
         especificadores_list = Especificador.objects.filter(nome_completo__icontains=query).order_by('nome_completo')
@@ -1029,6 +1168,9 @@ def especificadores_cadastrados(request):
 
 @login_required
 def especificador_add_view(request):
+    """
+    Permite adicionar um novo especificador. Apenas administradores e gerentes têm permissão.
+    """
     if request.user.role not in ['administrador', 'gerente']:
         messages.error(request, 'Você não tem permissão para adicionar especificadores.')
         return redirect('especificadores_cadastrados')
@@ -1045,6 +1187,9 @@ def especificador_add_view(request):
 
 @login_required
 def especificador_edit_view(request, pk):
+    """
+    Permite editar as informações de um especificador existente. Apenas administradores e gerentes têm permissão.
+    """
     if request.user.role not in ['administrador', 'gerente']:
         messages.error(request, 'Você não tem permissão para editar especificadores.')
         return redirect('especificadores_cadastrados')
@@ -1062,6 +1207,10 @@ def especificador_edit_view(request, pk):
 
 @login_required
 def download_template_view(request):
+    """
+    Permite que administradores baixem um template de planilha Excel
+    para importação de orçamentos, pré-preenchido com usuários.
+    """
     if request.user.role != 'administrador':
         return redirect('home')
 
@@ -1094,6 +1243,10 @@ def download_template_view(request):
 
 @login_required
 def importar_orcamentos(request):
+    """
+    Permite que administradores importem orçamentos de um arquivo .xlsx.
+    Processa o arquivo, cria ou atualiza orçamentos, clientes e especificadores.
+    """
     if request.user.role != 'administrador':
         return redirect('home')
 
@@ -1158,6 +1311,11 @@ def importar_orcamentos(request):
 
 @login_required
 def orcamentos_fechados_view(request):
+    """
+    Exibe uma lista de orçamentos fechados e ganhos, com opções de filtragem
+    por cliente, consultor, loja, mês, ano e especificador.
+    Disponível para gerentes e administradores.
+    """
     user = request.user
     if user.role not in ['gerente', 'administrador']:
         return redirect('home')
@@ -1219,12 +1377,20 @@ def orcamentos_fechados_view(request):
     return render(request, 'orcamentos_fechados.html', context)
 
 def search_clientes(request):
+    """
+    Endpoint AJAX para buscar clientes por nome completo.
+    Retorna uma lista de clientes que correspondem à query para uso em campos de seleção dinâmica.
+    """
     query = request.GET.get('q', '')
     clientes = Cliente.objects.filter(nome_completo__icontains=query)[:10]
     results = [{'id': cliente.id, 'text': cliente.nome_completo} for cliente in clientes]
     return JsonResponse({'results': results})
 
 def search_especificadores(request):
+    """
+    Endpoint AJAX para buscar especificadores por nome completo.
+    Retorna uma lista de especificadores que correspondem à query para uso em campos de seleção dinâmica.
+    """
     query = request.GET.get('q', '')
     especificadores = Especificador.objects.filter(nome_completo__icontains=query)[:10]
     results = [{'id': esp.id, 'text': esp.nome_completo} for esp in especificadores]
@@ -1232,6 +1398,9 @@ def search_especificadores(request):
 
 @login_required
 def notifications_view(request):
+    """
+    Exibe as notificações do usuário logado e as marca como lidas.
+    """
     notifications = Notification.objects.filter(recipient=request.user)
     # Mark notifications as read when the user views them
     notifications.update(is_read=True)
@@ -1239,6 +1408,10 @@ def notifications_view(request):
 
 @login_required
 def gerente_forecast_view(request):
+    """
+    Exibe a página de forecast para gerentes, mostrando orçamentos elegíveis
+    e orçamentos já no forecast de sua loja. Permite filtrar e gerenciar.
+    """
     if request.user.role != 'gerente':
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('home')
@@ -1322,6 +1495,10 @@ def gerente_forecast_view(request):
 
 @login_required
 def admin_forecast_dashboard_view(request):
+    """
+    Exibe o dashboard de forecast para administradores, consolidando dados de forecast
+    de todas as lojas. Inclui análise de motivos de perda e permite filtros.
+    """
     if request.user.role != 'administrador':
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('home')
@@ -1391,6 +1568,10 @@ def admin_forecast_dashboard_view(request):
 
 @login_required
 def get_orcamento_details(request, pk):
+    """
+    Endpoint AJAX para retornar detalhes de um orçamento específico.
+    Utilizado para preencher modais de edição ou visualização de detalhes.
+    """
     try:
         orcamento = get_object_or_404(Orcamento, pk=pk)
 
@@ -1440,6 +1621,10 @@ def get_orcamento_details(request, pk):
 @login_required
 @require_POST
 def update_orcamento_details(request, pk):
+    """
+    Endpoint AJAX para atualizar detalhes de um orçamento específico.
+    Processa dados JSON, valida com OrcamentoForm e salva as alterações.
+    """
     try:
         orcamento = get_object_or_404(Orcamento, pk=pk)
         data = json.loads(request.body)
@@ -1469,6 +1654,10 @@ def update_orcamento_details(request, pk):
 @login_required
 @require_POST
 def update_forecast_status(request):
+    """
+    Endpoint AJAX para atualizar o status 'is_forecast' de um orçamento.
+    Disponível apenas para gerentes, com verificação de permissão.
+    """
     if request.user.role != 'gerente':
         return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
 
