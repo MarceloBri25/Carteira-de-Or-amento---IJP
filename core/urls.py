@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (
     home_view, LojasView, register_user_view, logout_view,
     UserListView, user_edit_view, user_deactivate_view, user_activate_view, consultor_dashboard, consultor_criar_orcamento,
@@ -10,7 +10,9 @@ from .views import (
     download_template_view, search_clientes, search_especificadores, notifications_view,
     especificadores_cadastrados, especificador_add_view, especificador_edit_view,
     gerente_forecast_view, admin_forecast_dashboard_view, get_orcamento_details, update_orcamento_details,
-    update_forecast_status
+    update_forecast_status, facilitis_agenda_view, get_agendamentos_api, create_agendamento, facilitis_home_view,
+    update_agendamento_status, facilitis_conveniencia_view, update_conveniencia_status, update_sala_limpa_status,
+    get_agendamento_details_api, update_agendamento_api, delete_agendamento_api, indicadores_agenda_view
 )
 
 urlpatterns = [
@@ -26,11 +28,15 @@ urlpatterns = [
     path('dashboard/', consultor_dashboard, name='consultor_dashboard'),
     path('consultor/criar-orcamento/', consultor_criar_orcamento, name='consultor_criar_orcamento'),
     path('administrador/dashboard/', administrador_dashboard, name='administrador_dashboard'),
+    path('administrador/agenda/indicadores/', indicadores_agenda_view, name='indicadores_agenda'),
     path('administrador/forecast-dashboard/', admin_forecast_dashboard_view, name='admin_forecast_dashboard'),
     path('administrador/criar-orcamento/', administrador_criar_orcamento, name='administrador_criar_orcamento'),
     path('administrador/importar-orcamentos/', importar_orcamentos, name='importar_orcamentos'),
     path('administrador/importar-orcamentos/download-template/', download_template_view, name='download_template'),
     path('gerente/dashboard/', gerente_dashboard, name='gerente_dashboard'),
+    path('facilitis/home/', facilitis_home_view, name='facilitis_home'),
+    path('facilitis/agenda/', facilitis_agenda_view, name='facilitis_agenda'),
+    path('facilitis/conveniencia/', facilitis_conveniencia_view, name='facilitis_conveniencia'),
     path('gerente/criar-orcamento/', gerente_criar_orcamento, name='gerente_criar_orcamento'),
     path('gerente/forecast/', gerente_forecast_view, name='gerente_forecast'),
     path('gerente/forecast/update/', update_forecast_status, name='update_forecast_status'),
@@ -59,7 +65,15 @@ urlpatterns = [
     path('orcamentos-fechados/', orcamentos_fechados_view, name='orcamentos_fechados'),
     
     # API URLs for modal
-    path('api/orcamento/<int:pk>/details/', get_orcamento_details, name='get_orcamento_details'),
-    path('api/orcamento/<int:pk>/update/', update_orcamento_details, name='update_orcamento_details'),
+    path('orcamento/<int:pk>/details/', get_orcamento_details, name='get_orcamento_details'),
+    path('orcamento/<int:pk>/update/', update_orcamento_details, name='update_orcamento_details'),
+    path('agendamentos/', get_agendamentos_api, name='get_agendamentos_api'),
+    path('agendamentos/create/', create_agendamento, name='create_agendamento'),
+    path('agendamentos/update_status/<int:pk>/', update_agendamento_status, name='update_agendamento_status'),
+    path('agendamentos/<int:pk>/details/', get_agendamento_details_api, name='get_agendamento_details_api'),
+    path('agendamentos/update/<int:pk>/', update_agendamento_api, name='update_agendamento_api'),
+    path('agendamentos/delete/<int:pk>/', delete_agendamento_api, name='delete_agendamento_api'),
+    path('agendamentos/update_conveniencia_status/<int:pk>/', update_conveniencia_status, name='update_conveniencia_status'),
+    path('agendamentos/update_sala_limpa_status/<int:agendamento_id>/', update_sala_limpa_status, name='update_sala_limpa_status'),
 ]
 

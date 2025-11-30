@@ -1,0 +1,244 @@
+{% extends 'home.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Indicadores de Agenda - IJP Umbrella System{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-chart-line me-2"></i>Indicadores de Agendamento</h2>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'indicadores_agenda' %}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label for="year" class="form-label">Ano</label>
+                        <select name="year" id="year" class="form-select">
+                            {% for y in anos_disponiveis %}
+                                <option value="{{ y.year }}" {% if y.year == selected_year %}selected{% endif %}>{{ y.year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="month" class="form-label">Mês</label>
+                        <select name="month" id="month" class="form-select">
+                            {% for num, nome in meses_disponiveis.items %}
+                                <option value="{{ num }}" {% if num|as_int == selected_month %}selected{% endif %}>{{ nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="loja" class="form-label">Loja</label>
+                        <select name="loja" id="loja" class="form-select">
+                            <option value="">Todas</option>
+                            {% for loja in lojas %}
+                                <option value="{{ loja.id }}" {% if loja.id == selected_loja_id %}selected{% endif %}>{{ loja.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="cliente" class="form-label">Cliente</label>
+                        <select name="cliente" id="cliente" class="form-select">
+                            <option value="">Todos</option>
+                            {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {% if cliente.id == selected_cliente_id %}selected{% endif %}>{{ cliente.nome_completo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="especificador" class="form-label">Especificador</label>
+                        <select name="especificador" id="especificador" class="form-select">
+                            <option value="">Todos</option>
+                            {% for especificador in especificadores %}
+                                <option value="{{ especificador.id }}" {% if especificador.id == selected_especificador_id %}selected{% endif %}>{{ especificador.nome_completo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-2"></i>Filtrar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cards de KPIs -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Total de Agendamentos</h5>
+                    <p class="card-text fs-2 fw-bold">{{ indicadores_gerais.total }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Realizados</h5>
+                    <p class="card-text fs-2 fw-bold">{{ indicadores_gerais.realizado }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                    <h5 class="card-title">Cancelados</h5>
+                    <p class="card-text fs-2 fw-bold">{{ indicadores_gerais.cancelado }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-users fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Total de Visitantes</h5>
+                    <p class="card-text fs-2 fw-bold">{{ total_visitantes }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header"><i class="fas fa-chart-pie me-2"></i>Status dos Agendamentos</div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header"><i class="fas fa-building me-2"></i>Agendamentos por Loja</div>
+                <div class="card-body">
+                     <canvas id="lojaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-4 mb-4">
+         <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header"><i class="fas fa-star me-2"></i>Ranking de Consultores (Atendimentos Realizados)</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for consultor in ranking_consultores %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ consultor.responsavel__first_name }} {{ consultor.responsavel__last_name }}
+                            <span class="badge bg-primary rounded-pill">{{ consultor.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">Nenhum atendimento realizado no período.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header"><i class="fas fa-clipboard-list me-2"></i>Principais Motivos de Agendamento</div>
+                <div class="card-body">
+                    <canvas id="motivosChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar Choices.js para filtros
+        new Choices('#cliente', { searchEnabled: true, removeItemButton: true });
+        new Choices('#especificador', { searchEnabled: true, removeItemButton: true });
+
+        // Gráfico de Status
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Agendado', 'Realizado', 'Cancelado', 'Não Compareceu'],
+                datasets: [{
+                    label: 'Status',
+                    data: [
+                        {{ indicadores_gerais.agendado }},
+                        {{ indicadores_gerais.realizado }},
+                        {{ indicadores_gerais.cancelado }},
+                        {{ indicadores_gerais.nao_compareceu }}
+                    ],
+                    backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#6c757d'],
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                }
+            }
+        });
+
+        // Gráfico de Agendamentos por Loja
+        const lojaCtx = document.getElementById('lojaChart').getContext('2d');
+        new Chart(lojaCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in agendamentos_por_loja %}'{{ item.loja__nome }}',{% endfor %}],
+                datasets: [
+                    {
+                        label: 'Total de Agendamentos',
+                        data: [{% for item in agendamentos_por_loja %}{{ item.total }},{% endfor %}],
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Agendamentos Realizados',
+                        data: [{% for item in agendamentos_por_loja %}{{ item.realizados }},{% endfor %}],
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } },
+                responsive: true,
+            }
+        });
+        
+        // Gráfico de Motivos
+        const motivosCtx = document.getElementById('motivosChart').getContext('2d');
+        new Chart(motivosCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in principais_motivos %}'{{ item.motivo }}',{% endfor %}],
+                datasets: [{
+                    label: 'Quantidade',
+                    data: [{% for item in principais_motivos %}{{ item.count }},{% endfor %}],
+                    backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Gráfico de barras horizontal para melhor leitura
+                scales: { x: { beginAtZero: true } },
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+    });
+</script>
+{% endblock %}

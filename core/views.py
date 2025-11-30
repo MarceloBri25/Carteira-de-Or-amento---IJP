@@ -4,15 +4,16 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
 from django.views.generic import ListView
-from .models import Orcamento, Loja, User, Cliente, Especificador, JornadaClienteHistorico, Notification
+from .models import Orcamento, Loja, User, Cliente, Especificador, JornadaClienteHistorico, Notification, Agendamento
 from django.shortcuts import get_object_or_404
 from django import forms
-from .models import User, Orcamento, Cliente, Especificador, JornadaClienteHistorico
 import pandas as pd
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Sum, Count, Case, When, Value
+from django.db.models import Sum, Count, Case, When, Value, Q, F
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
+from itertools import groupby
+from collections import defaultdict
 from django.db import models
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -31,6 +32,10 @@ class UserRegistrationForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'role', 'loja']
+        widgets = {
+            'role': forms.Select(attrs={'class': 'form-select'}),
+            'loja': forms.Select(attrs={'class': 'form-select'}),
+        }
     
     def __init__(self, *args, **kwargs):
         super(UserRegistrationForm, self).__init__(*args, **kwargs)
@@ -128,6 +133,62 @@ class ClienteFullForm(forms.ModelForm):
         model = Cliente
         fields = '__all__'
 
+class AgendamentoForm(forms.ModelForm):
+    """
+    Formulário para criação e edição de agendamentos.
+    """
+    conveniencia_pedido = forms.CharField(widget=forms.HiddenInput(), required=False)
+
+    class Meta:
+        model = Agendamento
+        fields = [
+            'loja', 'responsavel', 'cliente', 'especificador', 'sala',
+            'horario_inicio', 'horario_fim', 'quantidade_convidados',
+            'conveniencia', 'conveniencia_pedido', 'motivo'
+        ]
+        widgets = {
+            'loja': forms.Select(attrs={'class': 'form-select'}),
+            'responsavel': forms.Select(attrs={'class': 'form-select'}),
+            'cliente': forms.Select(attrs={'class': 'form-select'}),
+            'especificador': forms.Select(attrs={'class': 'form-select'}),
+            'sala': forms.Select(attrs={'class': 'form-select'}),
+            'motivo': forms.Select(attrs={'class': 'form-select'}),
+            'horario_inicio': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'horario_fim': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'quantidade_convidados': forms.NumberInput(attrs={'class': 'form-control'}),
+            'conveniencia': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        horario_inicio = cleaned_data.get("horario_inicio")
+        horario_fim = cleaned_data.get("horario_fim")
+
+        if horario_inicio and horario_fim and horario_inicio >= horario_fim:
+            raise forms.ValidationError("O horário de fim deve ser posterior ao horário de início.")
+
+        return cleaned_data
+
+    def clean_conveniencia_pedido(self):
+        data = self.cleaned_data.get('conveniencia_pedido')
+        if not data:
+            return None
+        try:
+            parsed_data = json.loads(data)
+            # Normalize the old format from facilitis_home to the new one
+            if isinstance(parsed_data, dict):
+                flat_list = []
+                for category, items in parsed_data.items():
+                    if isinstance(items, list):
+                        for item in items:
+                            if isinstance(item, dict) and 'name' in item:
+                                flat_list.append({'item': item['name'], 'quantity': item.get('quantity', 1)})
+                return flat_list
+            return parsed_data
+        except (json.JSONDecodeError, TypeError):
+            raise forms.ValidationError("Invalid JSON string for convenience order.")
+
+
 @login_required
 def home_view(request):
     """
@@ -141,6 +202,8 @@ def home_view(request):
             return redirect('gerente_dashboard')
         elif request.user.role == 'administrador':
             return redirect('administrador_dashboard')
+        elif request.user.role == 'facilitis':
+            return redirect('facilitis_home')
     return redirect('login')
 
 class LojasView(ListView):
@@ -345,8 +408,6 @@ def consultor_criar_orcamento(request):
         'stage_choices': stage_choices,
     }
     return render(request, 'consultor_criar_orcamento.html', context)
-
-from django.http import JsonResponse
 
 def add_cliente(request):
     """
@@ -1682,3 +1743,485 @@ def update_forecast_status(request):
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+def facilitis_home_view(request):
+    """
+    Exibe a home do facilitis com uma planta baixa interativa dos agendamentos do dia.
+    """
+    if request.user.role not in ['facilitis', 'consultor', 'gerente']:
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('home')
+
+    form = AgendamentoForm()
+    
+    responsaveis_queryset = User.objects.filter(role__in=['consultor', 'gerente', 'administrador'])
+    if request.user.role == 'consultor':
+        responsaveis_queryset = User.objects.filter(pk=request.user.pk)
+
+    context = {
+        'form': form,
+        'salas': Agendamento.SALA_CHOICES,
+        'lojas': Loja.objects.all(),
+        'responsaveis': responsaveis_queryset,
+        'clientes': Cliente.objects.all(),
+        'especificadores': Especificador.objects.all(),
+        'motivos': Agendamento.MOTIVO_CHOICES,
+    }
+    return render(request, 'facilitis_home.html', context)
+
+
+@login_required
+def facilitis_agenda_view(request):
+    """
+    Exibe o dashboard do facilitis com o calendário de agendamentos.
+    """
+    if request.user.role not in ['facilitis', 'consultor', 'gerente']:
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('home')
+
+    form = AgendamentoForm()
+    user = request.user
+    if user.role == 'consultor':
+        form.fields['responsavel'].queryset = User.objects.filter(pk=user.pk)
+        form.fields['responsavel'].initial = user.pk
+    elif user.role == 'gerente':
+        # Gerente pode escolher ele mesmo ou consultores da sua loja
+        if user.loja:
+            responsaveis_queryset = User.objects.filter(
+                Q(pk=user.pk) | 
+                Q(role='consultor', loja=user.loja)
+            ).distinct()
+            form.fields['responsavel'].queryset = responsaveis_queryset
+        else:
+            # Se o gerente não tiver loja, ele só pode escolher a si mesmo
+            form.fields['responsavel'].queryset = User.objects.filter(pk=user.pk)
+        form.fields['responsavel'].initial = user.pk
+
+
+    context = {
+        'form': form,
+        'current_user_id': request.user.id,
+        'current_user_role': request.user.role,
+    }
+    return render(request, 'facilitis_agenda.html', context)
+
+
+@login_required
+def get_agendamentos_api(request):
+    """
+    API endpoint para retornar os agendamentos em formato JSON para o FullCalendar.
+    Filtra os agendamentos com base nos parâmetros 'start' and 'end' da requisição.
+    """
+    start_str = request.GET.get('start')
+    end_str = request.GET.get('end')
+
+    # FullCalendar envia as datas em formato ISO8601.
+    # `datetime.fromisoformat` pode falhar com o timezone "Z". Um replace resolve para UTC.
+    try:
+        start_date = datetime.fromisoformat(start_str.replace('Z', '+00:00')) if start_str else None
+        end_date = datetime.fromisoformat(end_str.replace('Z', '+00:00')) if end_str else None
+    except (ValueError, TypeError):
+        start_date = None
+        end_date = None
+
+    if start_date and end_date:
+        # Garante que as datas sejam aware
+        if timezone.is_naive(start_date):
+            start_date = timezone.make_aware(start_date)
+        if timezone.is_naive(end_date):
+            end_date = timezone.make_aware(end_date)
+            
+        agendamentos = Agendamento.objects.filter(
+            horario_inicio__lt=end_date,
+            horario_fim__gt=start_date
+        ).select_related('cliente', 'responsavel', 'especificador')
+    else:
+        # Fallback para views que buscam apenas os eventos do dia sem parâmetros
+        today = timezone.now().date()
+        agendamentos = Agendamento.objects.filter(
+            horario_inicio__date=today
+        ).select_related('cliente', 'responsavel', 'especificador')
+
+    events = []
+    for agendamento in agendamentos:
+        cliente_nome = agendamento.cliente.nome_completo if agendamento.cliente else 'N/A'
+        responsavel_nome = agendamento.responsavel.get_full_name() if agendamento.responsavel else 'N/A'
+        especificador_nome = agendamento.especificador.nome_completo if agendamento.especificador else 'N/A'
+        
+        events.append({
+            'title': f'{agendamento.motivo} - {cliente_nome}',
+            'start': agendamento.horario_inicio.isoformat(),
+            'end': agendamento.horario_fim.isoformat(),
+            'id': agendamento.id,
+            'sala': agendamento.sala,
+            'responsavel': responsavel_nome,
+            'responsavel_id': agendamento.responsavel.id if agendamento.responsavel else None,
+            'cliente': cliente_nome,
+            'especificador': especificador_nome,
+            'convidados': agendamento.quantidade_convidados,
+            'conveniencia': agendamento.conveniencia,
+            'motivo': agendamento.get_motivo_display(),
+            'status': agendamento.status,
+            'status_display': agendamento.get_status_display(),
+        })
+    return JsonResponse(events, safe=False)
+
+
+@login_required
+@require_POST
+def create_agendamento(request):
+    """
+    API endpoint para criar um novo agendamento.
+    Recebe dados via POST, valida com AgendamentoForm, checa conflitos e salva no banco.
+    """
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        
+        if user.role == 'consultor':
+            data['responsavel'] = user.pk
+        elif user.role == 'gerente':
+            responsavel_id = data.get('responsavel')
+            if responsavel_id:
+                try:
+                    responsavel = User.objects.get(pk=responsavel_id)
+                    # O responsável deve ser o próprio gerente ou um consultor da sua loja
+                    if not (responsavel.pk == user.pk or (responsavel.role == 'consultor' and responsavel.loja == user.loja)):
+                        return JsonResponse({'status': 'error', 'errors': {'responsavel': ['Este responsável não é válido.']}}, status=400)
+                except User.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'errors': {'responsavel': ['Responsável não encontrado.']}}, status=400)
+
+        form = AgendamentoForm(data)
+        
+        if form.is_valid():
+            sala = form.cleaned_data.get('sala')
+            horario_inicio = form.cleaned_data.get('horario_inicio')
+            horario_fim = form.cleaned_data.get('horario_fim')
+
+            # --- Conflict Detection Logic ---
+            # Exclude the current agendamento if we are editing
+            conflicts = Agendamento.objects.filter(
+                sala=sala,
+                status__in=['agendado', 'realizado']
+            ).filter(
+                Q(horario_inicio__lt=horario_fim) & Q(horario_fim__gt=horario_inicio)
+            )
+
+            if conflicts.exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'errors': {'__all__': ['Conflito de horário! A sala já está reservada neste período.']}
+                }, status=400)
+            # --- End of Conflict Detection ---
+
+            agendamento = form.save(commit=False)
+            agendamento.criado_por = request.user
+            agendamento.save()
+            
+            cliente_nome = agendamento.cliente.nome_completo if agendamento.cliente else 'N/A'
+            new_event = {
+                'title': f'{agendamento.motivo} - {cliente_nome}',
+                'start': agendamento.horario_inicio.isoformat(),
+                'end': agendamento.horario_fim.isoformat(),
+                'id': agendamento.id,
+                'extendedProps': {
+                    'sala': agendamento.sala,
+                    'responsavel': agendamento.responsavel.get_full_name() if agendamento.responsavel else 'N/A',
+                }
+            }
+            return JsonResponse({'status': 'success', 'event': new_event})
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def update_agendamento_status(request, pk):
+    try:
+        agendamento = get_object_or_404(Agendamento, pk=pk)
+        data = json.loads(request.body)
+        new_status = data.get('status')
+
+        if new_status not in [choice[0] for choice in Agendamento.STATUS_CHOICES]:
+            return JsonResponse({'status': 'error', 'message': 'Status inválido.'}, status=400)
+
+        agendamento.status = new_status
+        agendamento.save()
+        return JsonResponse({'status': 'success', 'message': 'Status atualizado com sucesso.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+def facilitis_conveniencia_view(request):
+    if request.user.role != 'facilitis':
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('home')
+
+    view_type = request.GET.get('view', 'today')
+    today = timezone.now().date()
+    
+    title = f"Pedidos de Hoje, {today.strftime('%d/%m/%Y')}"
+    agendamentos = Agendamento.objects.none()
+
+    if view_type == 'week':
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        title = f"Pedidos da Semana ({start_of_week.strftime('%d/%m')} - {end_of_week.strftime('%d/%m')})"
+        agendamentos = Agendamento.objects.filter(
+            conveniencia=True,
+            horario_inicio__date__range=[start_of_week, end_of_week]
+        ).order_by('horario_inicio')
+    
+    elif view_type == 'month':
+        title = f"Pedidos de {today.strftime('%B de %Y')}"
+        agendamentos = Agendamento.objects.filter(
+            conveniencia=True,
+            horario_inicio__year=today.year,
+            horario_inicio__month=today.month
+        ).order_by('horario_inicio')
+
+    else: # 'today'
+        agendamentos = Agendamento.objects.filter(
+            conveniencia=True,
+            horario_inicio__date=today
+        ).order_by('horario_inicio')
+
+    context = {
+        'agendamentos': agendamentos,
+        'view_type': view_type,
+        'title': title,
+    }
+    return render(request, 'facilitis_conveniencia.html', context)
+
+
+@login_required
+@require_POST
+def update_conveniencia_status(request, pk):
+    try:
+        agendamento = get_object_or_404(Agendamento, pk=pk)
+        # Toggle status
+        if agendamento.conveniencia_status == 'pendente':
+            agendamento.conveniencia_status = 'entregue'
+        else:
+            agendamento.conveniencia_status = 'pendente'
+        agendamento.save()
+        return JsonResponse({'status': 'success', 'new_status': agendamento.get_conveniencia_status_display()})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def get_agendamento_details_api(request, pk):
+    agendamento = get_object_or_404(Agendamento, pk=pk)
+    data = {
+        'id': agendamento.id,
+        'loja': agendamento.loja.id if agendamento.loja else '',
+        'responsavel': agendamento.responsavel.id if agendamento.responsavel else '',
+        'cliente': agendamento.cliente.id if agendamento.cliente else '',
+        'especificador': agendamento.especificador.id if agendamento.especificador else '',
+        'sala': agendamento.sala,
+        'horario_inicio': agendamento.horario_inicio,
+        'horario_fim': agendamento.horario_fim,
+        'quantidade_convidados': agendamento.quantidade_convidados,
+        'motivo': agendamento.motivo,
+        'status': agendamento.status,
+        'conveniencia': agendamento.conveniencia,
+        'conveniencia_pedido': agendamento.conveniencia_pedido,
+    }
+    return JsonResponse(data)
+
+@login_required
+@require_POST
+def update_agendamento_api(request, pk):
+    try:
+        agendamento = get_object_or_404(Agendamento, pk=pk)
+        
+        # Verificação de permissão
+        user = request.user
+        permission_denied = False
+        if user.role == 'consultor':
+            if agendamento.responsavel != user:
+                permission_denied = True
+        elif user.role == 'gerente':
+            # Gerente só pode alterar agendamentos da sua loja
+            if not user.loja or agendamento.loja != user.loja:
+                permission_denied = True
+        
+        if permission_denied:
+            return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+            
+        data = json.loads(request.body)
+        
+        # Add status to the form data if it exists
+        if 'status' in data:
+            agendamento.status = data['status']
+
+        form = AgendamentoForm(data, instance=agendamento)
+        
+        if form.is_valid():
+            agendamento = form.save()
+            return JsonResponse({'status': 'success'})
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def delete_agendamento_api(request, pk):
+    try:
+        agendamento = get_object_or_404(Agendamento, pk=pk)
+        
+        # Verificação de permissão
+        user = request.user
+        permission_denied = False
+        if user.role == 'consultor':
+            if agendamento.responsavel != user:
+                permission_denied = True
+        elif user.role == 'gerente':
+            # Gerente só pode alterar agendamentos da sua loja
+            if not user.loja or agendamento.loja != user.loja:
+                permission_denied = True
+        
+        if permission_denied:
+            return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+            
+        agendamento.delete()
+        return JsonResponse({'status': 'success', 'message': 'Agendamento excluído com sucesso.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def update_sala_limpa_status(request, agendamento_id):
+    if request.user.role != 'facilitis':
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+    try:
+        agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+        agendamento.sala_limpa = not agendamento.sala_limpa
+        agendamento.save()
+        return JsonResponse({'status': 'success', 'sala_limpa': agendamento.sala_limpa})
+    except Agendamento.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Agendamento not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+@login_required
+def indicadores_agenda_view(request):
+    if request.user.role != 'administrador':
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('home')
+
+    today = timezone.now()
+    # Filtros
+    selected_year = request.GET.get('year', str(today.year))
+    selected_month = request.GET.get('month', str(today.month))
+    selected_cliente_id = request.GET.get('cliente')
+    selected_especificador_id = request.GET.get('especificador')
+    selected_loja_id = request.GET.get('loja')
+
+    # Query base
+    agendamentos = Agendamento.objects.all()
+    if selected_year:
+        agendamentos = agendamentos.filter(horario_inicio__year=selected_year)
+    if selected_month:
+        agendamentos = agendamentos.filter(horario_inicio__month=selected_month)
+    if selected_cliente_id:
+        agendamentos = agendamentos.filter(cliente__id=selected_cliente_id)
+    if selected_especificador_id:
+        agendamentos = agendamentos.filter(especificador__id=selected_especificador_id)
+    if selected_loja_id:
+        agendamentos = agendamentos.filter(loja__id=selected_loja_id)
+
+    # 1. Indicadores Gerais de Agendamento
+    total_agendamentos = agendamentos.count()
+    status_counts = agendamentos.values('status').annotate(count=Count('id')).order_by('status')
+    
+    status_dict = {item['status']: item['count'] for item in status_counts}
+    indicadores_gerais = {
+        'total': total_agendamentos,
+        'agendado': status_dict.get('agendado', 0),
+        'realizado': status_dict.get('realizado', 0),
+        'cancelado': status_dict.get('cancelado', 0),
+        'nao_compareceu': status_dict.get('nao_compareceu', 0),
+    }
+
+    # 2. Quantidade de clientes/convidados que vieram
+    total_visitantes = agendamentos.filter(status='realizado').aggregate(total=Sum('quantidade_convidados'))['total'] or 0
+
+    # 3. Agendamentos por Loja
+    agendamentos_por_loja = agendamentos.values('loja__nome').annotate(
+        total=Count('id'),
+        realizados=Count(Case(When(status='realizado', then=1))),
+        cancelados=Count(Case(When(status='cancelado', then=1))),
+        agendados=Count(Case(When(status='agendado', then=1))),
+        # Adiciona a soma das horas
+        total_horas=Sum(F('horario_fim') - F('horario_inicio'))
+    ).order_by('-total')
+
+    for item in agendamentos_por_loja:
+        item['percentual_realizados'] = (item['realizados'] / item['total'] * 100) if item['total'] > 0 else 0
+        # Converte timedelta para horas
+        if item['total_horas']:
+            item['total_horas'] = item['total_horas'].total_seconds() / 3600
+        else:
+            item['total_horas'] = 0
+
+    # 4. Clientes e Especificadores que vieram (dos agendamentos realizados)
+    agendamentos_realizados = agendamentos.filter(status='realizado')
+    clientes_presentes = Cliente.objects.filter(agendamento__in=agendamentos_realizados).distinct()
+    especificadores_presentes = Especificador.objects.filter(agendamento__in=agendamentos_realizados).distinct()
+
+    # 5. Principais Motivos de Agendamento
+    principais_motivos = agendamentos.values('motivo').annotate(count=Count('id')).order_by('-count')
+
+    # 6. Ranking de Consultores
+    ranking_consultores = agendamentos.filter(status='realizado', responsavel__role='consultor').values('responsavel__first_name', 'responsavel__last_name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+
+    # 7. Previsão por Semana (simples contagem)
+    from django.db.models.functions import ExtractWeek
+    previsao_semanal = agendamentos.annotate(
+        week=ExtractWeek('horario_inicio')
+    ).values('week').annotate(
+        count=Count('id')
+    ).order_by('week')
+
+
+    # Opções para os filtros
+    anos_disponiveis = Agendamento.objects.dates('horario_inicio', 'year', order='DESC')
+    meses_disponiveis = {
+        '1': 'Janeiro', '2': 'Fevereiro', '3': 'Março', '4': 'Abril', '5': 'Maio', '6': 'Junho',
+        '7': 'Julho', '8': 'Agosto', '9': 'Setembro', '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
+    }
+    clientes = Cliente.objects.all()
+    especificadores = Especificador.objects.all()
+    lojas = Loja.objects.all()
+
+    context = {
+        'indicadores_gerais': indicadores_gerais,
+        'total_visitantes': total_visitantes,
+        'agendamentos_por_loja': agendamentos_por_loja,
+        'clientes_presentes': clientes_presentes,
+        'especificadores_presentes': especificadores_presentes,
+        'principais_motivos': principais_motivos,
+        'ranking_consultores': ranking_consultores,
+        'previsao_semanal': previsao_semanal,
+        # Filtros
+        'anos_disponiveis': anos_disponiveis,
+        'meses_disponiveis': meses_disponiveis,
+        'clientes': clientes,
+        'especificadores': especificadores,
+        'lojas': lojas,
+        'selected_year': int(selected_year),
+        'selected_month': int(selected_month),
+        'selected_cliente_id': int(selected_cliente_id) if selected_cliente_id else None,
+        'selected_especificador_id': int(selected_especificador_id) if selected_especificador_id else None,
+        'selected_loja_id': int(selected_loja_id) if selected_loja_id else None,
+    }
+    return render(request, 'indicadores_agenda.html', context)

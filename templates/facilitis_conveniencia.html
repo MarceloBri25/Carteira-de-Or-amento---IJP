@@ -1,0 +1,267 @@
+{% extends 'home.html' %}
+{% load static %}
+{% load comanda_tags %}
+
+{% block title %}Conveniência - IJP Umbrella System{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Comandas de Conveniência</h2>
+            <p class="text-muted">{{ title }}</p>
+        </div>
+        <div>
+            <a href="?view=today" class="btn {% if view_type == 'today' %}btn-dark{% else %}btn-outline-dark{% endif %}">Hoje</a>
+            <a href="?view=week" class="btn {% if view_type == 'week' %}btn-dark{% else %}btn-outline-dark{% endif %}">Semana</a>
+            <a href="?view=month" class="btn {% if view_type == 'month' %}btn-dark{% else %}btn-outline-dark{% endif %}">Mês</a>
+        </div>
+    </div>
+
+    {% if not agendamentos %}
+        <div class="text-center py-5">
+            <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Nenhuma comanda para o período selecionado.</p>
+        </div>
+    {% else %}
+        {% regroup agendamentos by horario_inicio.date as agendamentos_por_dia %}
+        {% for dia in agendamentos_por_dia %}
+            <h4 class="mb-3 mt-4 day-header">{{ dia.grouper|date:"l, d/m/Y" }}</h4>
+            <div class="horizontal-scroll-container">
+                <div class="row flex-nowrap">
+                    {% for agendamento in dia.list %}
+                    <div class="col-xl-3 col-lg-4 col-md-5 col-sm-8 me-3">
+                        <div class="card h-100 comanda-card" id="card-{{ agendamento.id }}" data-status="{{ agendamento.conveniencia_status }}" data-sala-limpa="{{ agendamento.sala_limpa|yesno:'true,false' }}">
+                            <div class="card-header comanda-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 card-time">{{ agendamento.horario_inicio|time:"H:i" }}</h5>
+                                    <span class="badge status-badge-{{ agendamento.conveniencia_status }}">{{ agendamento.get_conveniencia_status_display }}</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="fas fa-map-marker-alt me-2"></i> {{ agendamento.sala }} ({{ agendamento.loja.nome }})</h6>
+                                <hr>
+                                <div class="comanda-items">
+                                    {% render_comanda agendamento.conveniencia_pedido %}
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light comanda-footer">
+                                <small class="text-muted d-block"><i class="fas fa-user me-2"></i> {{ agendamento.cliente.nome_completo|default:"N/A" }}</small>
+                                <small class="text-muted d-block"><i class="fas fa-paint-brush me-2"></i> {{ agendamento.especificador.nome_completo|default:"N/A" }}</small>
+                            </div>
+                            <div class="card-action-footer p-3">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-sm btn-toggle-status" data-id="{{ agendamento.id }}">
+                                        {% if agendamento.conveniencia_status == 'pendente' %}
+                                            <i class="fas fa-check me-2"></i> Marcar como Entregue
+                                        {% else %}
+                                            <i class="fas fa-undo me-2"></i> Marcar como Pendente
+                                        {% endif %}
+                                    </button>
+                                    <button class="btn btn-sm mt-2 btn-toggle-sala-limpa" data-id="{{ agendamento.id }}">
+                                        {% if agendamento.sala_limpa %}
+                                            <i class="fas fa-undo me-2"></i> Desmarcar Sala Limpa
+                                        {% else %}
+                                            <i class="fas fa-broom me-2"></i> Marcar Sala Limpa
+                                        {% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super }}
+<style>
+    .day-header {
+        font-weight: 300;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 0.5rem;
+    }
+    .horizontal-scroll-container {
+        overflow-x: auto;
+        padding-bottom: 15px; /* for scrollbar */
+        white-space: nowrap; /* Prevent wrapping of inline-block elements */
+    }
+    .horizontal-scroll-container .row {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .comanda-card {
+        transition: all 0.3s ease;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        background-color: #fff;
+        color: #333;
+        width: 320px;
+        display: inline-block;
+        vertical-align: top;
+        position: relative; /* Needed for pseudo-elements */
+    }
+     .comanda-card[data-status="entregue"] {
+        background-color: #f0f0f0;
+    }
+    .comanda-card[data-status="entregue"] .card-header,
+    .comanda-card[data-status="entregue"] .card-body {
+        opacity: 0.6;
+    }
+    .comanda-card[data-sala-limpa="true"] {
+        border-top: 3px solid var(--bs-success); /* Subtle green top border */
+    }
+    .comanda-header {
+        background-color: #f7f7f7;
+        border-bottom: 2px dashed #ddd;
+    }
+    .card-time {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #000;
+    }
+    .comanda-items {
+        min-height: 150px;
+        font-family: 'Courier New', Courier, monospace;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .comanda-list .list-group-item {
+        font-size: 0.9rem;
+    }
+    .comanda-footer {
+        font-size: 0.8rem;
+    }
+    .card-action-footer .btn-toggle-status,
+    .card-action-footer .btn-toggle-sala-limpa { /* Combined styles */
+        border-radius: 50px;
+    }
+    .comanda-card[data-status="pendente"] .btn-toggle-status {
+        background-color: var(--bs-success);
+        color: white;
+    }
+    .comanda-card[data-status="entregue"] .btn-toggle-status {
+        background-color: var(--bs-warning);
+        color: black;
+    }
+    /* Styles for Sala Limpa button */
+    .comanda-card[data-sala-limpa="false"] .btn-toggle-sala-limpa {
+        background-color: #6c757d; /* Grey for not clean */
+        color: white;
+    }
+    .comanda-card[data-sala-limpa="true"] .btn-toggle-sala-limpa {
+        background-color: var(--bs-info); /* Blue for clean */
+        color: white;
+    }
+
+    .badge.status-badge-pendente { background-color: var(--bs-warning); color: black; }
+    .badge.status-badge-entregue { background-color: var(--bs-success); color: white; }
+    
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrfToken = getCookie('csrftoken');
+
+    // Handler for Convenience Status
+    document.querySelectorAll('.btn-toggle-status').forEach(button => {
+        button.addEventListener('click', function() {
+            const agendamentoId = this.dataset.id;
+            const card = document.getElementById(`card-${agendamentoId}`);
+
+            fetch(`/api/agendamentos/update_conveniencia_status/${agendamentoId}/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(result => {
+                if (result.status === 'success') {
+                    const newStatus = result.new_status === 'Entregue' ? 'entregue' : 'pendente';
+                    card.dataset.status = newStatus;
+                    
+                    const badge = card.querySelector('.badge');
+                    if (badge) {
+                        badge.textContent = result.new_status;
+                        badge.className = `badge status-badge-${newStatus}`;
+                    }
+
+                    if (newStatus === 'entregue') {
+                        button.innerHTML = `<i class="fas fa-undo me-2"></i> Marcar como Pendente`;
+                    } else {
+                        button.innerHTML = `<i class="fas fa-check me-2"></i> Marcar como Entregue`;
+                    }
+                } else {
+                    alert('Erro ao atualizar status: ' + (result.message || 'Erro desconhecido.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocorreu um erro de comunicação. Verifique o console para mais detalhes.');
+            });
+        });
+    });
+
+    // Handler for "Sala Limpa" Status button
+    document.querySelectorAll('.btn-toggle-sala-limpa').forEach(button => {
+        button.addEventListener('click', function() {
+            const agendamentoId = this.dataset.id;
+            const card = document.getElementById(`card-${agendamentoId}`);
+
+            fetch(`/api/agendamentos/update_sala_limpa_status/${agendamentoId}/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(result => {
+                if (result.status === 'success') {
+                    card.dataset.salaLimpa = result.sala_limpa; // Update data attribute
+                    if (result.sala_limpa) {
+                        button.innerHTML = `<i class="fas fa-undo me-2"></i> Desmarcar Sala Limpa`;
+                        button.classList.remove('btn-secondary'); // Assuming secondary for 'not clean'
+                        button.classList.add('btn-info'); // Assuming info for 'clean'
+                    } else {
+                        button.innerHTML = `<i class="fas fa-broom me-2"></i> Marcar Sala Limpa`;
+                        button.classList.remove('btn-info');
+                        button.classList.add('btn-secondary');
+                    }
+                } else {
+                    alert('Erro ao atualizar status da sala.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocorreu um erro de comunicação. Verifique o console para mais detalhes.');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

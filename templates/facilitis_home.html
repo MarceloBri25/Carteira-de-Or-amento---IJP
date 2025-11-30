@@ -1,0 +1,467 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block title %}Agenda de Salas - IJP Umbrella System{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 sticky-top-bar">
+        <div>
+            <h2 class="mb-0">Planta Baixa das Salas</h2>
+            <p class="text-muted mb-0">Visão do dia: {% now "d/m/Y" %}</p>
+        </div>
+    </div>
+
+    <div id="floor-plan-container" class="floor-plan">
+        <!-- Room cards will be injected here by JavaScript -->
+    </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal fade" id="convenienciaMenuModal" tabindex="-1" aria-labelledby="convenienciaMenuModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="convenienciaMenuModalLabel"><i class="fas fa-utensils me-2"></i> Cardápio Conveniência</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="accordion" id="menuAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingBebidas"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBebidas" aria-expanded="true" aria-controls="collapseBebidas"><i class="fas fa-wine-glass-alt me-2"></i> Bebidas</button></h2>
+                        <div id="collapseBebidas" class="accordion-collapse collapse show" aria-labelledby="headingBebidas"><div class="accordion-body"><div class="row">
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Agua" id="item-agua-home"></div><label class="form-control" for="item-agua-home">Agua</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Agua com gás" id="item-agua-gas-home"></div><label class="form-control" for="item-agua-gas-home">Agua com gás</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Coca-cola" id="item-coca-home"></div><label class="form-control" for="item-coca-home">Coca-cola</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Coca-Cola zero" id="item-coca-zero-home"></div><label class="form-control" for="item-coca-zero-home">Coca-Cola zero</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Energético" id="item-energetico-home"></div><label class="form-control" for="item-energetico-home">Energético</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Agua tonica" id="item-tonica-home"></div><label class="form-control" for="item-tonica-home">Agua tonica</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Suco natural" id="item-suco-home"></div><label class="form-control" for="item-suco-home">Suco natural</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmConvenienciaSelection">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Detalhes do Agendamento -->
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventDetailModalLabel">Detalhes do Agendamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Motivo:</strong> <span id="event-motivo"></span></p>
+                <p><strong>Cliente:</strong> <span id="event-cliente"></span></p>
+                <p><strong>Responsável:</strong> <span id="event-responsavel"></span></p>
+                <p><strong>Sala:</strong> <span id="event-sala"></span></p>
+                <p><strong>Horário:</strong> <span id="event-horario"></span></p>
+                <p><strong>Status:</strong> <span id="event-status-display"></span></p>
+                <hr>
+                <div class="mb-3">
+                    <label for="event-status-update" class="form-label">Atualizar Status:</label>
+                    <select id="event-status-update" class="form-select">
+                        <option value="agendado">Agendado</option>
+                        <option value="realizado">Realizado</option>
+                        <option value="cancelado">Cancelado</option>
+                        <option value="nao_compareceu">Não Compareceu</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="updateEventStatus">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ salas|json_script:"salas-data" }}
+<style>
+    .sticky-top-bar {
+        background-color: var(--primary-bg);
+        z-index: 1020;
+    }
+    .floor-plan {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        padding: 1rem;
+    }
+    .room-card {
+        background-color: var(--card-bg, #ffffff);
+        border: 1px solid var(--card-border, #dee2e6);
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+    }
+    .room-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+    }
+    .room-card-header {
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--card-border, #dee2e6);
+    }
+    .room-name { font-size: 1.25rem; font-weight: 700; }
+    .room-status .badge { font-size: 0.9rem; padding: 0.5em 0.75em; }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    .room-status .badge.bg-danger { animation: pulse 2s infinite; }
+    .room-card-body { padding: 1rem; flex-grow: 1; }
+    .current-event { font-size: 0.9rem; margin-bottom: 1rem; min-height: 40px; }
+    .timeline-container { width: 100%; }
+    .timeline-header { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted, #6c757d); margin-bottom: 0.25rem; }
+    .timeline { position: relative; width: 100%; height: 40px; background-color: #e9ecef; border-radius: .25rem; overflow: hidden; }
+    .timeline-event {
+        position: absolute;
+        height: 100%;
+        background-color: #3498db;
+        border-radius: .25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75em;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0 5px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: pointer;
+    }
+    .timeline-event:hover { filter: brightness(110%); }
+    .timeline-event.status-realizado { background-color: #28a745; }
+    .timeline-event.status-cancelado, .timeline-event.status-nao_compareceu { background-color: #6c757d; opacity: 0.6; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- MODAL AND FORM LOGIC ---
+    // Removed agendamentoModal and agendamentoFormEl as they are no longer needed
+    const convenienciaMenuModal = new bootstrap.Modal(document.getElementById('convenienciaMenuModal'));
+    const detailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrfToken = getCookie('csrftoken');
+
+    // Removed event listener for add-appointment-btn
+    // document.getElementById('add-appointment-btn').addEventListener('click', () => openBookingModal());
+    // Removed saveAgendamento as it is no longer needed
+    // document.getElementById('saveAgendamento').addEventListener('click', saveAgendamento);
+    document.getElementById('updateEventStatus').addEventListener('click', updateEventStatus);
+
+    // --- CONVENIENCE MODAL LOGIC (kept as it might be used elsewhere) ---
+    // The convenienciaCheckbox is still defined but its modal is not directly opened from here.
+    // It is possible this is part of a larger, shared modal system or just unused.
+    const convenienciaCheckbox = document.getElementById('id_conveniencia'); 
+    const convenienciaSelecionadaDiv = document.getElementById('conveniencia-selecionada');
+    const listaItensSelecionados = document.getElementById('lista-itens-selecionados');
+
+    if (convenienciaCheckbox) {
+        convenienciaCheckbox.addEventListener('change', function(event) {
+            event.preventDefault();
+            if (this.checked) {
+                convenienciaMenuModal.show();
+            } else {
+                document.getElementById('id_conveniencia_pedido').value = '';
+                if(listaItensSelecionados) listaItensSelecionados.innerHTML = '';
+                if(convenienciaSelecionadaDiv) convenienciaSelecionadaDiv.style.display = 'none';
+            }
+        });
+    }
+
+    document.querySelectorAll('.conveniencia-item').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const quantityInput = this.closest('.input-group').querySelector('.conveniencia-quantity');
+            if (this.checked) {
+                quantityInput.style.display = 'block';
+            } else {
+                quantityInput.style.display = 'none';
+            }
+        });
+    });
+
+    document.getElementById('confirmConvenienciaSelection').addEventListener('click', function() {
+        const selectedItems = [];
+        const menuAccordion = document.getElementById('menuAccordion');
+        menuAccordion.querySelectorAll('input.conveniencia-item:checked').forEach(item => {
+            const group = item.closest('.input-group');
+            const itemName = item.value;
+            const quantity = group.querySelector('.conveniencia-quantity').value;
+            selectedItems.push({ item: itemName, quantity: parseInt(quantity, 10) || 1 });
+        });
+        
+        document.getElementById('id_conveniencia_pedido').value = JSON.stringify(selectedItems);
+        if (convenienciaCheckbox) convenienciaCheckbox.checked = selectedItems.length > 0;
+
+        if (listaItensSelecionados) {
+            listaItensSelecionados.innerHTML = '';
+            if (selectedItems.length > 0) {
+                selectedItems.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = `${item.item} (Quantidade: ${item.quantity})`;
+                    listaItensSelecionados.appendChild(li);
+                });
+                if(convenienciaSelecionadaDiv) convenienciaSelecionadaDiv.style.display = 'block';
+            } else {
+                if(convenienciaSelecionadaDiv) convenienciaSelecionadaDiv.style.display = 'none';
+            }
+        }
+        
+        convenienciaMenuModal.hide();
+    });
+    
+    // Removed saveAgendamento and openBookingModal functions
+
+    // --- FLOOR PLAN LOGIC ---
+    const floorPlanContainer = document.getElementById('floor-plan-container');
+    const salasData = JSON.parse(document.getElementById('salas-data').textContent);
+    let scheduleData = []; // To hold the fetched events
+
+    function openDetailModal(eventId) {
+        const event = scheduleData.find(e => e.id == eventId);
+        if (!event) return;
+
+        const salaName = salasData.find(s => s[0] === event.sala)?.[1] || event.sala;
+        const start = new Date(event.start);
+        const end = new Date(event.end);
+
+        document.getElementById('eventDetailModalLabel').textContent = 'Detalhes: ' + event.motivo;
+        document.getElementById('event-motivo').textContent = event.motivo;
+        document.getElementById('event-cliente').textContent = event.cliente;
+        document.getElementById('event-responsavel').textContent = event.responsavel;
+        document.getElementById('event-sala').textContent = salaName;
+        document.getElementById('event-horario').textContent = `${start.toLocaleString('pt-BR')} - ${end.toLocaleString('pt-BR')}`;
+        document.getElementById('event-status-display').textContent = event.status_display;
+        document.getElementById('event-status-update').value = event.status;
+        document.getElementById('updateEventStatus').dataset.eventId = event.id;
+
+        detailModal.show();
+    }
+    
+    function updateEventStatus() {
+        const eventId = this.dataset.eventId;
+        const newStatus = document.getElementById('event-status-update').value;
+
+        fetch(`/api/agendamentos/update_status/${eventId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'success') {
+                detailModal.hide();
+                fetchSchedule(); // Refresh the view
+            } else {
+                alert('Erro ao atualizar status: ' + (result.message || 'Erro desconhecido.'));
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Ocorreu um erro de comunicação.');
+        });
+    }
+
+
+    floorPlanContainer.addEventListener('click', function(e) {
+        const eventElement = e.target.closest('.timeline-event');
+        if (eventElement && eventElement.dataset.eventId) {
+            openDetailModal(eventElement.dataset.eventId);
+        }
+    });
+
+    function buildFloorPlan(data) {
+        scheduleData = data;
+        if (!floorPlanContainer) return;
+
+        const eventsByRoom = {};
+        salasData.forEach(sala => { eventsByRoom[sala[0]] = []; });
+        data.forEach(event => {
+            if (event.sala in eventsByRoom) {
+                eventsByRoom[event.sala].push(event);
+            }
+        });
+
+        const now = new Date();
+        let timelineStart, timelineEnd;
+
+        if (data && data.length > 0) {
+            let minStartTime = null;
+            let maxEndTime = null;
+            data.forEach(event => {
+                const start = new Date(event.start);
+                const end = new Date(event.end);
+                if (!minStartTime || start < minStartTime) {
+                    minStartTime = start;
+                }
+                if (!maxEndTime || end > maxEndTime) {
+                    maxEndTime = end;
+                }
+            });
+
+            timelineStart = new Date(minStartTime);
+            timelineStart.setHours(timelineStart.getHours() - 1, 0, 0, 0);
+
+            timelineEnd = new Date(maxEndTime);
+            timelineEnd.setHours(timelineEnd.getHours() + 1, 0, 0, 0);
+        } else {
+            // Se não houver eventos, define o padrão 8h - 18h
+            timelineStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
+            timelineEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
+        }
+
+        const totalDayMinutes = (timelineEnd - timelineStart) / 60000;
+        
+        floorPlanContainer.innerHTML = '';
+        if (salasData.length === 0) {
+            floorPlanContainer.innerHTML = '<p class="text-center text-muted">Nenhuma sala cadastrada.</p>';
+            return;
+        }
+
+        for (const [roomKey, roomName] of salasData) {
+            const events = eventsByRoom[roomKey] || [];
+            let currentEvent = null;
+            const isOccupied = events.some(event => {
+                const start = new Date(event.start);
+                const end = new Date(event.end);
+                const isHappening = start <= now && now < end && event.status === 'agendado';
+                if (isHappening) currentEvent = event;
+                return isHappening;
+            });
+
+            let currentEventHtml = '<p class="text-muted">Nenhum evento no momento.</p>';
+            if (currentEvent) {
+                const end = new Date(currentEvent.end);
+                currentEventHtml = `<p><strong>Em andamento:</strong> ${currentEvent.title}<br><small>Termina às ${end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small></p>`;
+            }
+
+            let timelineHtml = '';
+            events.forEach(event => {
+                const start = new Date(event.start);
+                const end = new Date(event.end);
+                const visibleStart = new Date(Math.max(start, timelineStart));
+                const visibleEnd = new Date(Math.min(end, timelineEnd));
+
+                if (visibleStart < visibleEnd) {
+                    const startMinutes = (visibleStart - timelineStart) / 60000;
+                    const durationMinutes = (visibleEnd - visibleStart) / 60000;
+                    const left = (startMinutes / totalDayMinutes) * 100;
+                    const width = (durationMinutes / totalDayMinutes) * 100;
+                    
+                    timelineHtml += `
+                        <div class="timeline-event status-${event.status}" style="left: ${left}%; width: ${width}%;" 
+                             data-event-id="${event.id}"
+                             title="${event.title} (${start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})})">
+                        </div>`;
+                }
+            });
+
+            // Cabeçalho da timeline dinâmico ou fixo
+            let timelineHeaderHtml = '';
+            const startHour = timelineStart.getHours();
+            const endHour = timelineEnd.getHours();
+            
+            if (data && data.length > 0) {
+                 const hourSpan = Math.max(1, Math.floor((endHour - startHour) / 4)); // ~4-5 labels
+                 for (let hour = startHour; hour <= endHour; hour += hourSpan) {
+                    const position = ((hour - startHour) / (endHour - startHour)) * 100;
+                    let adjustment = `left: ${position}%; transform: translateX(-50%);`;
+                    if (hour === endHour) adjustment = 'right: 0; transform: none;';
+                    if (hour === startHour) adjustment = 'left: 0; transform: none;';
+                    timelineHeaderHtml += `<span style="position: absolute; ${adjustment}">${hour.toString().padStart(2, '0')}:00</span>`;
+                }
+            } else {
+                // Marcadores fixos para o dia sem eventos
+                const hoursToShow = [8, 12, 18]; 
+                hoursToShow.forEach(hour => {
+                    const position = ((hour - startHour) / (endHour - startHour)) * 100;
+                    let adjustment = `left: ${position}%; transform: translateX(-50%);`;
+                    if (hour === endHour) adjustment = 'right: 0; transform: none;';
+                    if (hour === startHour) adjustment = 'left: 0; transform: none;';
+                    timelineHeaderHtml += `<span style="position: absolute; ${adjustment}">${hour.toString().padStart(2, '0')}:00</span>`;
+                });
+            }
+
+
+            const roomCard = document.createElement('div');
+            roomCard.className = 'room-card';
+            roomCard.innerHTML = `
+                <div class="room-card-header">
+                    <span class="room-name">${roomName}</span>
+                    <span class="room-status"><span class="badge ${isOccupied ? 'bg-danger' : 'bg-success'}">${isOccupied ? 'Ocupada' : 'Livre'}</span></span>
+                </div>
+                <div class="room-card-body">
+                    <div class="current-event">${currentEventHtml}</div>
+                    <div class="timeline-container">
+                        <div class="timeline">${timelineHtml}</div>
+                        <div class="timeline-header" style="position: relative;">${timelineHeaderHtml}</div>
+                    </div>
+                </div>
+            `;
+            floorPlanContainer.appendChild(roomCard);
+        }
+    }
+
+    function fetchSchedule() {
+        if (floorPlanContainer && floorPlanContainer.innerHTML === '') {
+             floorPlanContainer.innerHTML = '<p class="text-center text-muted">Carregando salas...</p>';
+        }
+        
+        fetch("{% url 'get_agendamentos_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                buildFloorPlan(data);
+            })
+            .catch(error => {
+                console.error('Error fetching schedule:', error);
+                if(floorPlanContainer) floorPlanContainer.innerHTML = '<div class="alert alert-danger">Erro ao carregar a agenda.</div>';
+            });
+    }
+
+    // Initial load and periodic refresh
+    if (floorPlanContainer) {
+        fetchSchedule();
+        setInterval(fetchSchedule, 30000);
+    }
+});
+</script>
+{% endblock %}

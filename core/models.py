@@ -13,6 +13,7 @@ class User(AbstractUser):
         ('consultor', 'Consultor'),
         ('gerente', 'Gerente'),
         ('administrador', 'Administrador'),
+        ('facilitis', 'Facilitis'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     loja = models.ForeignKey(Loja, on_delete=models.SET_NULL, blank=True, null=True)
@@ -126,3 +127,73 @@ class Notification(models.Model):
 
     def __str__(self):
         return f'Notificação para {self.recipient.username} sobre o comentário {self.comment.id}'
+
+
+class Agendamento(models.Model):
+    SALA_CHOICES = [
+        ('Esperienza 1', 'Esperienza 1'),
+        ('Esperienza 2', 'Esperienza 2'),
+        ('Laccato', 'Laccato'),
+        ('Lacca', 'Lacca'),
+        ('Portobello Shop', 'Portobello Shop'),
+        ('Recepção Artefacto', 'Recepção Artefacto'),
+        ('Café IJP', 'Café IJP'),
+        ('Office Artefacto', 'Office Artefacto'),
+        ('Jantar Formal - Artefacto', 'Jantar Formal - Artefacto'),
+        ('Sala de Reunião Smart', 'Sala de Reunião Smart'),
+        ('Espaço Hunter Douglas', 'Espaço Hunter Douglas'),
+        ('Sala Cultura', 'Sala Cultura'),
+    ]
+
+    MOTIVO_CHOICES = [
+        ('Especificação', 'Especificação'),
+        ('Apresentação Showroom', 'Apresentação Showroom'),
+        ('Apresentação Produtos', 'Apresentação Produtos'),
+        ('Apresentação Orçamentos', 'Apresentação Orçamentos'),
+        ('Pagamento', 'Pagamento'),
+        ('Gravação', 'Gravação'),
+        ('Negociação e Fechamento', 'Negociação e Fechamento'),
+        ('Revisão de Projeto', 'Revisão de Projeto'),
+        ('Relacionamento', 'Relacionamento'),
+    ]
+
+    STATUS_CHOICES = [
+        ('agendado', 'Agendado'),
+        ('realizado', 'Realizado'),
+        ('cancelado', 'Cancelado'),
+        ('nao_compareceu', 'Não Compareceu'),
+    ]
+
+    CONVENIENCIA_STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('entregue', 'Entregue'),
+    ]
+
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='agendamentos')
+    responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='agendamentos_responsaveis')
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True)
+    especificador = models.ForeignKey(Especificador, on_delete=models.SET_NULL, null=True, blank=True)
+    sala = models.CharField(max_length=50, choices=SALA_CHOICES)
+    horario_inicio = models.DateTimeField()
+    horario_fim = models.DateTimeField()
+    quantidade_convidados = models.PositiveIntegerField(default=1)
+    conveniencia = models.BooleanField(default=False)
+    conveniencia_pedido = models.JSONField(null=True, blank=True)
+    motivo = models.CharField(max_length=50, choices=MOTIVO_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='agendado')
+    conveniencia_status = models.CharField(
+        max_length=20,
+        choices=CONVENIENCIA_STATUS_CHOICES,
+        default='pendente'
+    )
+    sala_limpa = models.BooleanField(default=False)
+    criado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='agendamentos_criados')
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        cliente_nome = self.cliente.nome_completo if self.cliente else "N/A"
+        return f'Agendamento em {self.sala} para {cliente_nome} ({self.horario_inicio.strftime("%d/%m/%Y %H:%M")})'
+
+    class Meta:
+        ordering = ['horario_inicio']
+

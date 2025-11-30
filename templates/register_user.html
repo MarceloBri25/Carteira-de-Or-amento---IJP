@@ -101,30 +101,20 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="role" class="form-label">Cargo</label>
-                            <select class="form-select {% if form.role.errors %}is-invalid{% endif %}" name="role" id="role" required>
-                                <option selected disabled>Selecione o cargo</option>
-                                <option value="consultor" {% if form.role.value == 'consultor' %}selected{% endif %}>Consultor</option>
-                                <option value="gerente" {% if form.role.value == 'gerente' %}selected{% endif %}>Gerente</option>
-                                <option value="administrador" {% if form.role.value == 'administrador' %}selected{% endif %}>Administrador</option>
-                            </select>
+                            <label for="id_role" class="form-label">Cargo</label>
+                            {{ form.role }}
                             {% if form.role.errors %}
-                                <div class="invalid-feedback">
+                                <div class="invalid-feedback d-block">
                                     {{ form.role.errors }}
                                 </div>
                             {% endif %}
                         </div>
 
                         <div class="mb-3" id="loja-group" style="display: none;">
-                            <label for="loja" class="form-label">Loja</label>
-                            <select class="form-select {% if form.loja.errors %}is-invalid{% endif %}" name="loja" id="loja">
-                                <option selected disabled>Selecione a loja</option>
-                                {% for loja in lojas %}
-                                    <option value="{{ loja.id }}" {% if form.loja.value == loja.id %}selected{% endif %}>{{ loja.nome }}</option>
-                                {% endfor %}
-                            </select>
+                            <label for="id_loja" class="form-label">Loja</label>
+                            {{ form.loja }}
                             {% if form.loja.errors %}
-                                <div class="invalid-feedback">
+                                <div class="invalid-feedback d-block">
                                     {{ form.loja.errors }}
                                 </div>
                             {% endif %}
@@ -145,48 +135,52 @@
 {{ block.super }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const roleSelect = document.getElementById('role');
+        const roleSelect = document.getElementById('id_role');
         const lojaGroup = document.getElementById('loja-group');
-        const lojaSelect = document.getElementById('loja');
+        const lojaSelect = document.getElementById('id_loja');
 
         function toggleLojaField() {
             const selectedRole = roleSelect.value;
             if (selectedRole === 'consultor' || selectedRole === 'gerente') {
                 lojaGroup.style.display = 'block';
-                lojaSelect.setAttribute('required', 'required');
+                if(lojaSelect) lojaSelect.setAttribute('required', 'required');
             } else {
                 lojaGroup.style.display = 'none';
-                lojaSelect.removeAttribute('required');
-                lojaSelect.value = ''; // Clear selected value when hidden
+                if(lojaSelect) lojaSelect.removeAttribute('required');
             }
         }
 
-        roleSelect.addEventListener('change', toggleLojaField);
-
-        // Initial check in case of pre-filled form or page refresh
-        toggleLojaField();
-
+        if (roleSelect) {
+            roleSelect.addEventListener('change', toggleLojaField);
+            // Initial check in case of pre-filled form or page refresh
+            toggleLojaField();
+        }
+        
         const togglePassword = document.querySelector('#togglePassword');
         const password = document.querySelector('#password');
 
-        togglePassword.addEventListener('click', function (e) {
-            // toggle the type attribute
-            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-            password.setAttribute('type', type);
-            // toggle the eye slash icon
-            this.classList.toggle('bi-eye');
-        });
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function (e) {
+                // toggle the type attribute
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+                // toggle the eye slash icon
+                this.classList.toggle('bi-eye');
+            });
+        }
 
         const togglePassword2 = document.querySelector('#togglePassword2');
         const password2 = document.querySelector('#password2');
 
-        togglePassword2.addEventListener('click', function (e) {
-            // toggle the type attribute
-            const type = password2.getAttribute('type') === 'password' ? 'text' : 'password';
-            password2.setAttribute('type', type);
-            // toggle the eye slash icon
-            this.classList.toggle('bi-eye');
-        });
+        if (togglePassword2) {
+            togglePassword2.addEventListener('click', function (e) {
+                // toggle the type attribute
+                const type = password2.getAttribute('type') === 'password' ? 'text' : 'password';
+                password2.setAttribute('type', type);
+                // toggle the eye slash icon
+                this.classList.toggle('bi-eye');
+            });
+        }
     });
 </script>
 {% endblock %}

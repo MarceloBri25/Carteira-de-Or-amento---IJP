@@ -1,0 +1,568 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block title %}Agenda - IJP Umbrella System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-end mb-2">
+        <div class="d-flex align-items-center me-3">
+            <span class="d-inline-block me-2" style="width: 15px; height: 15px; background-color: #0d6efd; border-radius: 3px;"></span> Agendado
+        </div>
+        <div class="d-flex align-items-center me-3">
+            <span class="d-inline-block me-2" style="width: 15px; height: 15px; background-color: green; border-radius: 3px;"></span> Realizado
+        </div>
+        <div class="d-flex align-items-center">
+            <span class="d-inline-block me-2" style="width: 15px; height: 15px; background-color: red; border-radius: 3px;"></span> Cancelado / Não Compareceu
+        </div>
+    </div>
+    <div id="calendar-container" style="background-color: var(--card-bg); padding: 20px; border-radius: 8px;">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Modal para Adicionar/Editar Agendamento -->
+<div class="modal fade" id="agendamentoModal" tabindex="-1" aria-labelledby="agendamentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agendamentoModalLabel">Novo Agendamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="form-errors" class="mb-3"></div>
+                <form id="agendamentoForm">
+                    <input type="hidden" id="agendamentoId" name="agendamentoId">
+                    {% csrf_token %}
+                    <input type="hidden" name="conveniencia_pedido" id="id_conveniencia_pedido">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_loja" class="form-label">Loja</label>
+                            {{ form.loja }}
+                        </div>
+                        {% if request.user.role != 'consultor' %}
+                        <div class="col-md-6 mb-3">
+                            <label for="id_responsavel" class="form-label">Pessoa Responsável</label>
+                            {{ form.responsavel }}
+                        </div>
+                        {% else %}
+                            <input type="hidden" name="responsavel" value="{{ request.user.id }}">
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_cliente" class="form-label">Cliente</label>
+                            {{ form.cliente }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_especificador" class="form-label">Especificador</label>
+                            {{ form.especificador }}
+                        </div>
+                    </div>
+                     <div class="mb-3">
+                        <label for="id_sala" class="form-label">Sala</label>
+                        {{ form.sala }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_horario_inicio" class="form-label">Horário de Início</label>
+                            {{ form.horario_inicio }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_horario_fim" class="form-label">Horário de Fim</label>
+                            {{ form.horario_fim }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                             <label for="id_quantidade_convidados" class="form-label">Quantidade de Convidados</label>
+                            {{ form.quantidade_convidados }}
+                        </div>
+                         <div class="col-md-6 mb-3">
+                            <label for="id_motivo" class="form-label">Motivo do Agendamento</label>
+                            {{ form.motivo }}
+                        </div>
+                    </div>
+                     <div class="mb-3">
+                        <label for="id_status" class="form-label">Status</label>
+                        <select id="id_status" name="status" class="form-select">
+                            <option value="agendado">Agendado</option>
+                            <option value="realizado">Realizado</option>
+                            <option value="cancelado">Cancelado</option>
+                            <option value="nao_compareceu">Não Compareceu</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="id_conveniencia" name="conveniencia">
+                        <label class="form-check-label" for="id_conveniencia">
+                            Conveniência (abrir cardápio)
+                        </label>
+                    </div>
+                    <div id="conveniencia-selecionada" class="mt-3" style="display: none;">
+                        <h6>Itens de Conveniência Selecionados:</h6>
+                        <ul id="lista-itens-selecionados" class="list-group">
+                        </ul>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-danger" id="deleteAgendamento">Excluir</button>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" id="saveAgendamento">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Covenience Menu Modal -->
+<div class="modal fade" id="convenienciaMenuModal" tabindex="-1" aria-labelledby="convenienciaMenuModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="convenienciaMenuModalLabel"><i class="fas fa-utensils me-2"></i> Cardápio Conveniência</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="accordion" id="menuAccordion">
+                    <!-- Bebidas -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingBebidas"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBebidas" aria-expanded="true" aria-controls="collapseBebidas"><i class="fas fa-wine-glass-alt me-2"></i> Bebidas</button></h2>
+                        <div id="collapseBebidas" class="accordion-collapse collapse show" aria-labelledby="headingBebidas"><div class="accordion-body"><div class="row">
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Água" id="item-agua"></div><label class="form-control" for="item-agua">Água</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Água com Gás" id="item-agua-gas"></div><label class="form-control" for="item-agua-gas">Água com Gás</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Coca-Cola" id="item-coca"></div><label class="form-control" for="item-coca">Coca-Cola</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Coca-Cola Zero" id="item-coca-zero"></div><label class="form-control" for="item-coca-zero">Coca-Cola Zero</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Energético" id="item-energetico"></div><label class="form-control" for="item-energetico">Energético</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Água Tônica" id="item-tonica"></div><label class="form-control" for="item-tonica">Água Tônica</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Suco Natural" id="item-suco"></div><label class="form-control" for="item-suco">Suco Natural</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                    <!-- Chá Quente -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingCha"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCha" aria-expanded="false" aria-controls="collapseCha"><i class="fas fa-mug-hot me-2"></i> Chá Quente</button></h2>
+                        <div id="collapseCha" class="accordion-collapse collapse" aria-labelledby="headingCha"><div class="accordion-body"><div class="row">
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Gengibre" id="item-cha-gengibre"></div><label class="form-control" for="item-cha-gengibre">Gengibre</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Hortelã" id="item-cha-hortela"></div><label class="form-control" for="item-cha-hortela">Hortelã</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Boldo" id="item-cha-boldo"></div><label class="form-control" for="item-cha-boldo">Boldo</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Erva-Doce" id="item-cha-erva-doce"></div><label class="form-control" for="item-cha-erva-doce">Erva-Doce</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Hibisco com Rosa Silvestre e Amora" id="item-cha-hibisco"></div><label class="form-control" for="item-cha-hibisco">Hibisco com Rosa Silvestre e Amora</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Camomila" id="item-cha-camomila"></div><label class="form-control" for="item-cha-camomila">Camomila</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Maçã com Canela" id="item-cha-maca-canela"></div><label class="form-control" for="item-cha-maca-canela">Maçã com Canela</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-4 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Frutas Vermelhas" id="item-cha-frutas-vermelhas"></div><label class="form-control" for="item-cha-frutas-vermelhas">Frutas Vermelhas</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                    <!-- Cafés -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingCafes"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCafes" aria-expanded="false" aria-controls="collapseCafes"><i class="fas fa-coffee me-2"></i> Cafés</button></h2>
+                        <div id="collapseCafes" class="accordion-collapse collapse" aria-labelledby="headingCafes"><div class="accordion-body"><div class="row">
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Café Coado" id="item-cafe-coado"></div><label class="form-control" for="item-cafe-coado">Café Coado</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Café Expresso" id="item-cafe-expresso"></div><label class="form-control" for="item-cafe-expresso">Café Expresso</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Café com Leite" id="item-cafe-leite"></div><label class="form-control" for="item-cafe-leite">Café com Leite</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Cappuccino" id="item-cappuccino"></div><label class="form-control" for="item-cappuccino">Cappuccino</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                    <!-- Entradas -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingEntradas"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEntradas" aria-expanded="false" aria-controls="collapseEntradas"><i class="fas fa-tapas me-2"></i> Entradas</button></h2>
+                        <div id="collapseEntradas" class="accordion-collapse collapse" aria-labelledby="headingEntradas"><div class="accordion-body"><div class="row">
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Salada Verde com castanhas, tomate cereja ao molho de mostarda e mel" id="item-salada-verde"></div><label class="form-control" for="item-salada-verde">Salada Verde com castanhas, tomate cereja ao molho de mostarda e mel</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Bruschetta de cream cheese com tomates confitados" id="item-bruschetta"></div><label class="form-control" for="item-bruschetta">Bruschetta de cream cheese com tomates confitados</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Cestinha recheada com caponata" id="item-cestinha-caponata"></div><label class="form-control" for="item-cestinha-caponata">Cestinha recheada com caponata</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Cestinha Crocante de frutas" id="item-cestinha-frutas"></div><label class="form-control" for="item-cestinha-frutas">Cestinha Crocante de frutas</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Dadinho de Tapioca com geleia de pimenta" id="item-dadinho-tapioca"></div><label class="form-control" for="item-dadinho-tapioca">Dadinho de Tapioca com geleia de pimenta</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                    <!-- Pratos Principais -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingPratos"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePratos" aria-expanded="false" aria-controls="collapsePratos"><i class="fas fa-concierge-bell me-2"></i> Pratos Principais</button></h2>
+                        <div id="collapsePratos" class="accordion-collapse collapse" aria-labelledby="headingPratos"><div class="accordion-body"><div class="row">
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Salmão com crosta de maracujá, mousseline de cará finalizado com molho de maracujá com laranja" id="item-salmao-maracuja"></div><label class="form-control" for="item-salmao-maracuja">Salmão com crosta de maracujá, mousseline de cará finalizado com molho de maracujá com laranja</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Trouxinha de Massa Folheada recheada de pirarucu, purê de banana pacovã finalizado na redução de tucupi" id="item-trouxinha-pirarucu"></div><label class="form-control" for="item-trouxinha-pirarucu">Trouxinha de Massa Folheada recheada de pirarucu, purê de banana pacovã finalizado na redução de tucupi</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Talharim ao molho de camarões, leite de coco e tomates confitados" id="item-talharim-camaroes"></div><label class="form-control" for="item-talharim-camaroes">Talharim ao molho de camarões, leite de coco e tomates confitados</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Risoto de Camarões finalizado com croutons de abobrinha" id="item-risoto-camaroes"></div><label class="form-control" for="item-risoto-camaroes">Risoto de Camarões finalizado com croutons de abobrinha</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Filé de Pirarucu Grelhado no azeite de ervas, acompanhado de risoto de limão-siciliano perfumado com tomilho fresco" id="item-pirarucu-limao"></div><label class="form-control" for="item-pirarucu-limao">Filé de Pirarucu Grelhado no azeite de ervas, acompanhado de risoto de limão-siciliano perfumado com tomilho fresco</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Filé Mignon ao molho mostarda, acompanhado de batatinhas ao murro" id="item-file-mignon"></div><label class="form-control" for="item-file-mignon">Filé Mignon ao molho mostarda, acompanhado de batatinhas ao murro</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Pirarucu Grelhado com risoto de limão-siciliano" id="item-pirarucu-grelhado-risoto"></div><label class="form-control" for="item-pirarucu-grelhado-risoto">Pirarucu Grelhado com risoto de limão-siciliano</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Risoto de Camarão com croutons de abobrinhas" id="item-risoto-camarao-croutons"></div><label class="form-control" for="item-risoto-camarao-croutons">Risoto de Camarão com croutons de abobrinhas</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Salada Caprese com filé de frango e shitakes" id="item-salada-caprese"></div><label class="form-control" for="item-salada-caprese">Salada Caprese com filé de frango e shitakes</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Risoto de Queijo Coalho com Tucumã com costela de tambaqui marinada no vinho branco e ervas frescas" id="item-risoto-queijo-tucuma"></div><label class="form-control" for="item-risoto-queijo-tucuma">Risoto de Queijo Coalho com Tucumã com costela de tambaqui marinada no vinho branco e ervas frescas</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                    <!-- Pratos Fitness -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFitness"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFitness" aria-expanded="false" aria-controls="collapseFitness"><i class="fas fa-heartbeat me-2"></i> Pratos Fitness</button></h2>
+                        <div id="collapseFitness" class="accordion-collapse collapse" aria-labelledby="headingFitness"><div class="accordion-body"><div class="row">
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Steak Tartar com chips de batata-doce" id="item-steak-tartar"></div><label class="form-control" for="item-steak-tartar">Steak Tartar com chips de batata-doce</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Tartar de Salmão com chips de folha de arroz" id="item-tartar-salmao"></div><label class="form-control" for="item-tartar-salmao">Tartar de Salmão com chips de folha de arroz</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Filé de Frango Recheado com espinafre, tomate e mussarela de búfala, acompanhada de salada gourmet e ratatouille ao molho de tomate fresco" id="item-frango-recheado"></div><label class="form-control" for="item-frango-recheado">Filé de Frango Recheado com espinafre, tomate e mussarela de búfala, acompanhada de salada gourmet e ratatouille ao molho de tomate fresco</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Filé de Frango Grelhado, shitakes salteados e bifum oriental de vegetais ao molho oriental" id="item-frango-grelhado"></div><label class="form-control" for="item-frango-grelhado">Filé de Frango Grelhado, shitakes salteados e bifum oriental de vegetais ao molho oriental</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                    <!-- Sobremesas -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingSobremesas"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSobremesas" aria-expanded="false" aria-controls="collapseSobremesas"><i class="fas fa-ice-cream me-2"></i> Sobremesas</button></h2>
+                        <div id="collapseSobremesas" class="accordion-collapse collapse" aria-labelledby="headingSobremesas"><div class="accordion-body"><div class="row">
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Panelinha de Marshmallow com Nutella e sorvete de tapioca" id="item-panelinha-marshmallow"></div><label class="form-control" for="item-panelinha-marshmallow">Panelinha de Marshmallow com Nutella e sorvete de tapioca</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Brigadeiro de Colher com cumaru e caramelo salgado com toque de flor de sal e praliné de nuts" id="item-brigadeiro-colher"></div><label class="form-control" for="item-brigadeiro-colher">Brigadeiro de Colher com cumaru e caramelo salgado com toque de flor de sal e praliné de nuts</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Cheesecake Desconstruído de geleia de uvas e frutas vermelhas" id="item-cheesecake-desconstruido"></div><label class="form-control" for="item-cheesecake-desconstruido">Cheesecake Desconstruído de geleia de uvas e frutas vermelhas</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Barrinha de Tâmaras Crocante com castanhas de chocolate" id="item-barrinha-tamaras"></div><label class="form-control" for="item-barrinha-tamaras">Barrinha de Tâmaras Crocante com castanhas de chocolate</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Pudim 0% Lactose" id="item-pudim-lactose"></div><label class="form-control" for="item-pudim-lactose">Pudim 0% Lactose</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                            <div class="col-md-6 mb-2"><div class="input-group input-group-sm"><div class="input-group-text"><input class="form-check-input mt-0 conveniencia-item" type="checkbox" value="Verrine de manga com chia" id="item-verrine-manga"></div><label class="form-control" for="item-verrine-manga">Verrine de manga com chia</label><input type="number" class="form-control conveniencia-quantity" value="1" min="1" style="display: none;" placeholder="Qtd"></div></div>
+                        </div></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmConvenienciaSelection">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super }}
+<!-- FullCalendar JS e CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+
+<style>
+    :root {
+        --fc-border-color: var(--card-border);
+        --fc-today-bg-color: rgba(52, 58, 64, 0.1);
+        --fc-button-bg-color: var(--btn-primary-bg);
+        --fc-button-active-bg-color: var(--btn-primary-hover-bg);
+        --fc-button-border-color: var(--btn-primary-bg);
+    }
+    .fc-event.status-agendado, .fc-daygrid-dot-event.status-agendado { background-color: #0d6efd; border-color: #0d6efd; }
+    .fc-event.status-realizado, .fc-daygrid-dot-event.status-realizado { background-color: green; border-color: green; }
+    .fc-event.status-cancelado, .fc-daygrid-dot-event.status-cancelado,
+    .fc-event.status-nao_compareceu, .fc-daygrid-dot-event.status-nao_compareceu { background-color: red; border-color: red; }
+
+    /* Text color for day headers and numbers */
+    .fc .fc-col-header-cell-cushion, .fc .fc-daygrid-day-number {
+        color: black !important;
+        text-decoration: none !important;
+    }
+    /* Text color for events */
+    .fc-daygrid-event-harness .fc-event-time, .fc-daygrid-event-harness .fc-event-title {
+        color: white !important;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrfToken = getCookie('csrftoken');
+    const currentUserId = {{ current_user_id|default:"null" }};
+    const currentUserRole = '{{ current_user_role }}';
+
+    const agendamentoModal = new bootstrap.Modal(document.getElementById('agendamentoModal'));
+    const convenienciaMenuModal = new bootstrap.Modal(document.getElementById('convenienciaMenuModal'));
+    const agendamentoForm = document.getElementById('agendamentoForm');
+    const calendarEl = document.getElementById('calendar');
+    let clienteChoices = null;
+    let especificadorChoices = null;
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: "{% url 'get_agendamentos_api' %}",
+        locale: 'pt-br',
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+        dateClick: (info) => openAgendamentoModal({ date: info.dateStr }),
+        eventClick: (info) => openAgendamentoModal({ eventId: info.event.id, extendedProps: info.event.extendedProps }),
+        eventClassNames: (arg) => ['status-' + arg.event.extendedProps.status]
+    });
+    calendar.render();
+
+    function openAgendamentoModal({ eventId = null, date = null, extendedProps = null } = {}) {
+        agendamentoForm.reset();
+        document.getElementById('form-errors').innerHTML = '';
+        const saveButton = document.getElementById('saveAgendamento');
+        const deleteButton = document.getElementById('deleteAgendamento');
+        
+        let canEdit = currentUserRole !== 'consultor';
+        if (currentUserRole === 'consultor') {
+            if (!eventId || (extendedProps && extendedProps.responsavel_id === currentUserId)) {
+                canEdit = true;
+            }
+        }
+        
+        saveButton.disabled = !canEdit;
+        deleteButton.disabled = !canEdit;
+
+        if (eventId) {
+            document.getElementById('agendamentoModalLabel').textContent = 'Editar Agendamento';
+            deleteButton.style.display = canEdit ? 'block' : 'none';
+            document.getElementById('agendamentoId').value = eventId;
+            
+            fetch(`/api/agendamentos/${eventId}/details/`).then(res => res.json()).then(data => {
+                Object.keys(data).forEach(key => {
+                    const el = agendamentoForm.elements[key];
+                    if (el) {
+                        if (key === 'conveniencia_pedido') {
+                            // Ensure it's a valid JSON string, default to '[]'
+                            el.value = data[key] ? JSON.stringify(data[key]) : '[]';
+                        } else if (el.type === 'datetime-local') {
+                            el.value = formatDateTimeForInput(data[key]);
+                        } else if (el.type === 'checkbox') {
+                            el.checked = data[key];
+                        } else {
+                            el.value = data[key];
+                        }
+                    }
+                });
+
+                if (clienteChoices) clienteChoices.setChoiceByValue(String(data.cliente || ''));
+                if (especificadorChoices) especificadorChoices.setChoiceByValue(String(data.especificador || ''));
+
+                // Manually trigger the UI update for convenience items after data is loaded
+                updateConvenienciaUI();
+            });
+        } else {
+            document.getElementById('agendamentoModalLabel').textContent = 'Novo Agendamento';
+            deleteButton.style.display = 'none';
+            document.getElementById('agendamentoId').value = '';
+            agendamentoForm.elements.conveniencia_pedido.value = '[]'; // Default for new appointments
+            if(date) document.getElementById('id_horario_inicio').value = formatDateTimeForInput(date);
+            updateConvenienciaUI(); // Also reset for new modal
+        }
+        agendamentoModal.show();
+    }
+
+    function saveAgendamento() {
+        const agendamentoId = document.getElementById('agendamentoId').value;
+        const url = agendamentoId ? `/api/agendamentos/update/${agendamentoId}/` : "{% url 'create_agendamento' %}";
+        const data = Object.fromEntries(new FormData(agendamentoForm).entries());
+
+        // Ensure conveniencia_pedido is valid JSON before submitting
+        if (!data.conveniencia_pedido || data.conveniencia_pedido.trim() === '') {
+            data.conveniencia_pedido = '[]';
+        }
+        // Also handle the main 'conveniencia' checkbox state
+        data.conveniencia = document.getElementById('id_conveniencia').checked;
+
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify(data)
+        }).then(res => res.json()).then(handleFormResponse).catch(err => console.error("Save failed", err));
+    }
+
+    function deleteAgendamento() {
+        const agendamentoId = document.getElementById('agendamentoId').value;
+        if (!agendamentoId || !confirm('Tem certeza que deseja excluir este agendamento?')) return;
+        
+        fetch(`/api/agendamentos/delete/${agendamentoId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken }
+        }).then(res => res.json()).then(handleFormResponse).catch(err => console.error("Delete failed", err));
+    }
+
+    function handleFormResponse(result) {
+        if (result.status === 'success') {
+            agendamentoModal.hide();
+            calendar.refetchEvents();
+        } else {
+            const errorDiv = document.getElementById('form-errors');
+            let errorHtml = '<div class="alert alert-danger"><ul>';
+            if (result.errors) {
+                if (result.errors.__all__) errorHtml += `<li>${result.errors.__all__[0]}</li>`;
+                for (const field in result.errors) {
+                    if (field !== '__all__') errorHtml += `<li><strong>${field}:</strong> ${result.errors[field][0]}</li>`;
+                }
+            } else if (result.message) {
+                 errorHtml += `<li>${result.message}</li>`;
+            }
+            errorHtml += '</ul></div>';
+            errorDiv.innerHTML = errorHtml;
+        }
+    }
+
+    document.getElementById('saveAgendamento').addEventListener('click', saveAgendamento);
+    document.getElementById('deleteAgendamento').addEventListener('click', deleteAgendamento);
+
+    const convenienciaCheckbox = document.getElementById('id_conveniencia');
+    const convenienciaPedidoInput = document.getElementById('id_conveniencia_pedido');
+    const listaItensSelecionados = document.getElementById('lista-itens-selecionados');
+    const convenienciaSelecionadaDiv = document.getElementById('conveniencia-selecionada');
+
+    // Function to update the displayed selected items
+    function updateSelectedItemsDisplay() {
+        listaItensSelecionados.innerHTML = '';
+        const selectedItems = convenienciaPedidoInput.value ? JSON.parse(convenienciaPedidoInput.value) : [];
+        if (selectedItems.length > 0) {
+            selectedItems.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                li.textContent = `${item.quantity}x ${item.item}`;
+                listaItensSelecionados.appendChild(li);
+            });
+            convenienciaSelecionadaDiv.style.display = 'block';
+        } else {
+            convenienciaSelecionadaDiv.style.display = 'none';
+        }
+    }
+
+    // Handle conveniencia checkbox change
+    if (convenienciaCheckbox) {
+        convenienciaCheckbox.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                convenienciaMenuModal.show();
+            } else {
+                // Clear selection if checkbox is unchecked
+                convenienciaPedidoInput.value = '';
+                updateSelectedItemsDisplay();
+                // Uncheck all menu items and hide quantities
+                document.querySelectorAll('.conveniencia-item').forEach(itemCheckbox => {
+                    itemCheckbox.checked = false;
+                    const quantityInput = itemCheckbox.closest('.input-group').querySelector('.conveniencia-quantity');
+                    if (quantityInput) {
+                        quantityInput.value = 1;
+                        quantityInput.style.display = 'none';
+                    }
+                });
+            }
+        });
+    }
+
+    // Handle menu item checkbox change to show/hide quantity
+    document.querySelectorAll('.conveniencia-item').forEach(itemCheckbox => {
+        itemCheckbox.addEventListener('change', (event) => {
+            const quantityInput = event.target.closest('.input-group').querySelector('.conveniencia-quantity');
+            if (quantityInput) {
+                if (event.target.checked) {
+                    quantityInput.style.display = 'block';
+                } else {
+                    quantityInput.style.display = 'none';
+                    quantityInput.value = 1; // Reset quantity when unchecked
+                }
+            }
+        });
+    });
+
+    // Handle Confirm Selection button click
+    document.getElementById('confirmConvenienciaSelection').addEventListener('click', () => {
+        const selectedItems = [];
+        document.querySelectorAll('.conveniencia-item:checked').forEach(itemCheckbox => {
+            const itemName = itemCheckbox.value;
+            const quantityInput = itemCheckbox.closest('.input-group').querySelector('.conveniencia-quantity');
+            const quantity = quantityInput ? parseInt(quantityInput.value, 10) : 1;
+            selectedItems.push({ item: itemName, quantity: quantity });
+        });
+        convenienciaPedidoInput.value = JSON.stringify(selectedItems);
+        updateSelectedItemsDisplay();
+        convenienciaMenuModal.hide();
+        // Ensure the main conveniencia checkbox is checked if items are selected
+        if (selectedItems.length > 0) {
+            convenienciaCheckbox.checked = true;
+        } else {
+            convenienciaCheckbox.checked = false;
+        }
+    });
+
+    // Reset menu modal state when it's hidden
+    document.getElementById('convenienciaMenuModal').addEventListener('hidden.bs.modal', function () {
+        // If the main conveniencia checkbox was unchecked, clear items
+        if (!convenienciaCheckbox.checked) {
+            convenienciaPedidoInput.value = '';
+            updateSelectedItemsDisplay();
+            document.querySelectorAll('.conveniencia-item').forEach(itemCheckbox => {
+                itemCheckbox.checked = false;
+                const quantityInput = itemCheckbox.closest('.input-group').querySelector('.conveniencia-quantity');
+                if (quantityInput) {
+                    quantityInput.value = 1;
+                    quantityInput.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    // When agendamentoModal is shown, initialize the Choices instances
+    document.getElementById('agendamentoModal').addEventListener('shown.bs.modal', function () {
+        if (!clienteChoices) clienteChoices = new Choices('#id_cliente', { searchEnabled: true, removeItemButton: true });
+        if (!especificadorChoices) especificadorChoices = new Choices('#id_especificador', { searchEnabled: true, removeItemButton: true });
+    });
+
+    // Function to update the entire convenience UI based on the hidden input
+    function updateConvenienciaUI() {
+        const convenienciaPedidoValue = convenienciaPedidoInput.value;
+        let selectedItems = [];
+        try {
+            selectedItems = convenienciaPedidoValue ? JSON.parse(convenienciaPedidoValue) : [];
+        } catch (e) {
+            console.error('Invalid JSON in conveniencia_pedido:', convenienciaPedidoValue);
+            selectedItems = [];
+        }
+
+        document.querySelectorAll('.conveniencia-item').forEach(itemCheckbox => {
+            const itemName = itemCheckbox.value;
+            const quantityInput = itemCheckbox.closest('.input-group').querySelector('.conveniencia-quantity');
+            const foundItem = selectedItems.find(item => item.item === itemName);
+            
+            if (foundItem) {
+                itemCheckbox.checked = true;
+                if (quantityInput) {
+                    quantityInput.value = foundItem.quantity;
+                    quantityInput.style.display = 'block';
+                }
+            } else {
+                itemCheckbox.checked = false;
+                if (quantityInput) {
+                    quantityInput.value = 1;
+                    quantityInput.style.display = 'none';
+                }
+            }
+        });
+        
+        convenienciaCheckbox.checked = selectedItems.length > 0;
+        updateSelectedItemsDisplay();
+    }
+
+    function formatDateTimeForInput(dateStr) {
+        if (!dateStr) return '';
+        
+        // Corrige o problema do fuso horário ao criar a data
+        // Trata a string como local, não UTC, adicionando T00:00:00
+        const d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+        
+        // Se a data ainda for inválida, retorna string vazia
+        if (isNaN(d.getTime())) {
+            return '';
+        }
+
+        // Formata para YYYY-MM-DDTHH:mm
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        const hours = d.getHours().toString().padStart(2, '0');
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+});
+</script>
+{% endblock %}

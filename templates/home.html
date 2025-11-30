@@ -185,11 +185,16 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    {% if not user.is_authenticated or user.role != 'facilitis' %}
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="{% url 'home' %}">Home</a>
                     </li>
+                    {% endif %}
                     {% if user.is_authenticated %}
                         {% if user.role == 'administrador' %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'indicadores_agenda' %}active{% endif %}" href="{% url 'indicadores_agenda' %}">Agenda</a>
+                            </li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" id="visaoDiretoriaDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Visão Diretoria
@@ -225,6 +230,9 @@
                         {% endif %}
                         {% if user.role == 'consultor' %}
                             <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'facilitis_agenda' %}active{% endif %}" href="{% url 'facilitis_agenda' %}">Agenda</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" href="{% url 'meus_clientes_consultor' %}">Jornada do Cliente</a>
                             </li>
                             <li class="nav-item">
@@ -244,6 +252,9 @@
                             </li>
                         {% endif %}
                         {% if user.role == 'gerente' %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'facilitis_agenda' %}active{% endif %}" href="{% url 'facilitis_agenda' %}">Agenda</a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'gerente_forecast' %}">Forecast</a>
                             </li>
@@ -267,6 +278,17 @@
                                     <li><a class="dropdown-item" href="{% url 'clientes_cadastrados' %}">Clientes Cadastrados</a></li>
                                     <li><a class="dropdown-item" href="{% url 'especificadores_cadastrados' %}">Especificadores Cadastrados</a></li>
                                 </ul>
+                            </li>
+                        {% endif %}
+                        {% if user.role == 'facilitis' %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'facilitis_home' %}active{% endif %}" href="{% url 'facilitis_home' %}">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'facilitis_agenda' %}active{% endif %}" href="{% url 'facilitis_agenda' %}">Agenda</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'facilitis_conveniencia' %}active{% endif %}" href="{% url 'facilitis_conveniencia' %}">Conveniência</a>
                             </li>
                         {% endif %}
                         <li class="nav-item">
