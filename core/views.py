@@ -2116,15 +2116,14 @@ def indicadores_agenda_view(request):
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('home')
 
-    today = timezone.now()
     # Filtros
-    selected_year = request.GET.get('year', str(today.year))
-    selected_month = request.GET.get('month', str(today.month))
+    selected_year = request.GET.get('year')
+    selected_month = request.GET.get('month')
     selected_cliente_id = request.GET.get('cliente')
     selected_especificador_id = request.GET.get('especificador')
     selected_loja_id = request.GET.get('loja')
 
-    # Query base
+    # Query base para a maioria dos indicadores, que respeita as datas
     agendamentos = Agendamento.objects.all()
     if selected_year:
         agendamentos = agendamentos.filter(horario_inicio__year=selected_year)
@@ -2153,35 +2152,33 @@ def indicadores_agenda_view(request):
     # 2. Quantidade de clientes/convidados que vieram
     total_visitantes = agendamentos.filter(status='realizado').aggregate(total=Sum('quantidade_convidados'))['total'] or 0
 
-    # 3. Agendamentos por Loja
-    agendamentos_por_loja = agendamentos.values('loja__nome').annotate(
-        total=Count('id'),
-        realizados=Count(Case(When(status='realizado', then=1))),
-        cancelados=Count(Case(When(status='cancelado', then=1))),
-        agendados=Count(Case(When(status='agendado', then=1))),
-        # Adiciona a soma das horas
-        total_horas=Sum(F('horario_fim') - F('horario_inicio'))
-    ).order_by('-total')
+    # 3. Agendamentos por Loja - Garantir que todas as lojas apareçam
+    todas_lojas = Loja.objects.all()
+    agendamentos_por_loja = []
+    for loja in todas_lojas:
+        agendamentos_da_loja = agendamentos.filter(loja=loja)
+        total = agendamentos_da_loja.count()
+        realizados = agendamentos_da_loja.filter(status='realizado').count()
+        
+        agendamentos_por_loja.append({
+            'loja__nome': loja.nome,
+            'total': total,
+            'realizados': realizados,
+        })
+    agendamentos_por_loja = sorted(agendamentos_por_loja, key=lambda x: x['total'], reverse=True)
 
-    for item in agendamentos_por_loja:
-        item['percentual_realizados'] = (item['realizados'] / item['total'] * 100) if item['total'] > 0 else 0
-        # Converte timedelta para horas
-        if item['total_horas']:
-            item['total_horas'] = item['total_horas'].total_seconds() / 3600
-        else:
-            item['total_horas'] = 0
 
     # 4. Clientes e Especificadores que vieram (dos agendamentos realizados)
     agendamentos_realizados = agendamentos.filter(status='realizado')
     clientes_presentes = Cliente.objects.filter(agendamento__in=agendamentos_realizados).distinct()
     especificadores_presentes = Especificador.objects.filter(agendamento__in=agendamentos_realizados).distinct()
 
-    # 5. Principais Motivos de Agendamento
-    principais_motivos = agendamentos.values('motivo').annotate(count=Count('id')).order_by('-count')
+    # 5. Principais Motivos de Agendamento (Query Isolada, ignora TUDO)
+    principais_motivos = Agendamento.objects.values('motivo').annotate(count=Count('id')).order_by('-count')
 
-    # 6. Ranking de Consultores
-    ranking_consultores = agendamentos.filter(status='realizado', responsavel__role='consultor').values('responsavel__first_name', 'responsavel__last_name').annotate(
-        count=Count('id')
+    # 6. Ranking de Consultores (mostra todos os consultores, conta todos os status)
+    ranking_consultores = User.objects.filter(role='consultor').annotate(
+        count=Count('agendamentos_responsaveis')
     ).order_by('-count')
 
     # 7. Previsão por Semana (simples contagem)
@@ -2218,8 +2215,8 @@ def indicadores_agenda_view(request):
         'clientes': clientes,
         'especificadores': especificadores,
         'lojas': lojas,
-        'selected_year': int(selected_year),
-        'selected_month': int(selected_month),
+        'selected_year': int(selected_year) if selected_year else None,
+        'selected_month': int(selected_month) if selected_month else None,
         'selected_cliente_id': int(selected_cliente_id) if selected_cliente_id else None,
         'selected_especificador_id': int(selected_especificador_id) if selected_especificador_id else None,
         'selected_loja_id': int(selected_loja_id) if selected_loja_id else None,

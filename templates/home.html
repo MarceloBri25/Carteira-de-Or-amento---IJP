@@ -177,7 +177,7 @@
         <div class="container-fluid">
             {% block navbar_brand %}
             <a class="navbar-brand" href="{% url 'home' %}">
-                <img src="{% static 'Image/Logo IJP Umbrella System do Navbar.png' %}" alt="IJP Umbrella System Logo" style="height: 40px;">
+                <img src="{% static 'Image/Logo Collab System 1.png' %}" alt="IJP Umbrella System Logo" style="height: 40px;">
             </a>
             {% endblock %}
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -192,14 +192,12 @@
                     {% endif %}
                     {% if user.is_authenticated %}
                         {% if user.role == 'administrador' %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'indicadores_agenda' %}active{% endif %}" href="{% url 'indicadores_agenda' %}">Agenda</a>
-                            </li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" id="visaoDiretoriaDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Visão Diretoria
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="visaoDiretoriaDropdown">
+                                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'indicadores_agenda' %}active{% endif %}" href="{% url 'indicadores_agenda' %}">Agenda</a></li>
                                     <li><a class="dropdown-item" href="{% url 'admin_forecast_dashboard' %}">Forecast</a></li>
                                 </ul>
                             </li>
