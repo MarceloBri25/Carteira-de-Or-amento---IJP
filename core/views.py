@@ -243,28 +243,52 @@ def logout_view(request):
 class UserListView(ListView):
     """
     View baseada em classe para listar todos os usuários cadastrados.
-    Organiza os usuários por loja e exibe aqueles sem loja associada.
+    Organiza os usuários por loja e exibe aqueles sem loja associada,
+    além de uma seção separada para 'facilitis'.
     """
     model = User
     template_name = 'user_list.html'
     context_object_name = 'users'
 
+    def get_queryset(self):
+        queryset = User.objects.all().order_by('loja__nome', 'username')
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(
+                Q(username__icontains=query) |
+                Q(email__icontains=query) |
+                Q.Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(role__icontains=query) |
+                Q(loja__nome__icontains=query)
+            ).distinct()
+        return queryset
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        users = context['users']
+
         lojas = Loja.objects.all()
         users_by_loja = {loja: [] for loja in lojas}
-        users_sem_loja = []
+        users_sem_loja_non_facilitis = []
+        facilitis_users = []
 
-        users = User.objects.all().order_by('loja__nome', 'username')
-        
         for user in users:
-            if user.loja:
+            if user.role == 'facilitis':
+                facilitis_users.append(user)
+            elif user.loja and user.loja in users_by_loja:
                 users_by_loja[user.loja].append(user)
             else:
-                users_sem_loja.append(user)
+                users_sem_loja_non_facilitis.append(user)
+        
+        # Filtra dicionário de lojas para não exibir lojas vazias após a busca
+        if self.request.GET.get('q'):
+             users_by_loja = {loja: users for loja, users in users_by_loja.items() if users}
+
 
         context['users_by_loja'] = users_by_loja
-        context['users_sem_loja'] = users_sem_loja
+        context['users_sem_loja'] = users_sem_loja_non_facilitis
+        context['facilitis_users'] = facilitis_users
         return context
 
 def user_edit_view(request, pk):
