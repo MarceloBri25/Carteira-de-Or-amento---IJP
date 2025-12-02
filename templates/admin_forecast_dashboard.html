@@ -254,46 +254,48 @@
         <div class="kanban-board-container">
             <div class="kanban-board">
                 {% for loja in dashboard_data %}
-                <div class="kanban-column">
-                    <div class="kanban-column-header">
-                        <h3 class="kanban-column-title">{{ loja.loja_nome }}</h3>
-                        <div class="kanban-column-total">
-                            {{ loja.orcamentos_count }} orçamentos | R$ {{ loja.valor_total_carteira|br_format }}
-                        </div>
-                    </div>
-                    <div class="kanban-cards">
-                        {% for orcamento in loja.orcamentos %}
-                        <div class="kanban-card {% if orcamento.etapa == 'Fechada e Ganha' %}bg-success-subtle{% endif %}" data-bs-toggle="modal" data-bs-target="#orcamentoEditModal" data-orcamento-id="{{ orcamento.id }}">
-                            <div class="card-value">
-                                R$ {{ orcamento.valor_orcamento|br_format }}
+                    {% if loja.loja_nome != "RH" and loja.loja_nome != "Diretoria" %}
+                    <div class="kanban-column">
+                        <div class="kanban-column-header">
+                            <h3 class="kanban-column-title">{{ loja.loja_nome }}</h3>
+                            <div class="kanban-column-total">
+                                {{ loja.orcamentos_count }} orçamentos | R$ {{ loja.valor_total_carteira|br_format }}
                             </div>
-                            <p title="Etapa">
-                                <i class="fas fa-info-circle fa-fw"></i>
-                                {{ orcamento.get_etapa_display }}
-                            </p>
-                            <p title="Cliente">
-                                <i class="fas fa-user fa-fw"></i>
-                                {{ orcamento.nome_cliente.nome_completo|default:"-" }}
-                            </p>
-                            {% if orcamento.especificador %}
-                            <p title="Especificador">
-                                <i class="fas fa-user-tie fa-fw"></i>
-                                {{ orcamento.especificador.nome_completo }}
-                            </p>
-                            {% endif %}
-                            <p title="Previsão de Fechamento">
-                                <i class="fas fa-calendar-week fa-fw"></i>
-                                {{ orcamento.semana_previsao_fechamento|default:"Não definida" }}
-                            </p>
                         </div>
-                        {% empty %}
-                        <div class="text-center p-4">
-                            <i class="fas fa-box-open fa-2x text-secondary-dark mb-2"></i>
-                            <p class="text-secondary-dark">Nenhum orçamento em forecast.</p>
+                        <div class="kanban-cards">
+                            {% for orcamento in loja.orcamentos %}
+                            <div class="kanban-card {% if orcamento.etapa == 'Fechada e Ganha' %}bg-success-subtle{% endif %}" data-bs-toggle="modal" data-bs-target="#orcamentoEditModal" data-orcamento-id="{{ orcamento.id }}">
+                                <div class="card-value">
+                                    R$ {{ orcamento.valor_orcamento|br_format }}
+                                </div>
+                                <p title="Etapa">
+                                    <i class="fas fa-info-circle fa-fw"></i>
+                                    {{ orcamento.get_etapa_display }}
+                                </p>
+                                <p title="Cliente">
+                                    <i class="fas fa-user fa-fw"></i>
+                                    {{ orcamento.nome_cliente.nome_completo|default:"-" }}
+                                </p>
+                                {% if orcamento.especificador %}
+                                <p title="Especificador">
+                                    <i class="fas fa-user-tie fa-fw"></i>
+                                    {{ orcamento.especificador.nome_completo }}
+                                </p>
+                                {% endif %}
+                                <p title="Previsão de Fechamento">
+                                    <i class="fas fa-calendar-week fa-fw"></i>
+                                    {{ orcamento.semana_previsao_fechamento|default:"Não definida" }}
+                                </p>
+                            </div>
+                            {% empty %}
+                            <div class="text-center p-4">
+                                <i class="fas fa-box-open fa-2x text-secondary-dark mb-2"></i>
+                                <p class="text-secondary-dark">Nenhum orçamento em forecast.</p>
+                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
-                </div>
+                    {% endif %}
                 {% empty %}
                 <div class="w-100 text-center">
                     <div class="alert alert-light bg-opacity-10" role="alert">
